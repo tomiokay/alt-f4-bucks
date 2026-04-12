@@ -47,6 +47,7 @@ Team members can bet their Alt-F4 Bucks against each other on real FRC match out
 - **APIs:** The Blue Alliance (TBA) provides match schedules and results; Statbotics provides additional stats
 - **TBA API:** Requires an API key, returns match data in JSON format
 - **Users:** FRC Team 7558 members, mostly high school students — UI must be simple and intuitive
+- **UI reference:** Polymarket-style interface — event cards with clean layout, easy bet placement, live results feel
 - **Existing UI:** shadcn/ui components, Tailwind CSS v4, dark mode support via next-themes
 
 ## Constraints

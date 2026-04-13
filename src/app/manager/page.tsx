@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AwardForm } from "@/components/award-form";
 import { StoreManagement } from "@/components/store-management";
@@ -18,23 +17,22 @@ export default async function ManagerPage() {
     getAllStoreItems(),
   ]);
 
-  // Filter out the current manager from the member list for awards
   const members = allProfiles.filter((p) => p.id !== profile.id);
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight">Manager Panel</h1>
-        <p className="text-sm text-muted-foreground">
-          Award bucks, manage the store, and review all transactions.
+      <div>
+        <h1 className="text-lg font-semibold text-foreground">Manager</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Award bucks, manage store, review transactions
         </p>
       </div>
 
       <Tabs defaultValue="award" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="award">Award Bucks</TabsTrigger>
-          <TabsTrigger value="store">Store Items</TabsTrigger>
-          <TabsTrigger value="audit">Audit Log</TabsTrigger>
+        <TabsList className="bg-secondary border-0">
+          <TabsTrigger value="award">Award</TabsTrigger>
+          <TabsTrigger value="store">Store</TabsTrigger>
+          <TabsTrigger value="audit">Audit</TabsTrigger>
         </TabsList>
 
         <TabsContent value="award">
@@ -44,25 +42,15 @@ export default async function ManagerPage() {
         </TabsContent>
 
         <TabsContent value="store">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Store Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StoreManagement items={storeItems} />
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-border/50 bg-card p-5">
+            <StoreManagement items={storeItems} />
+          </div>
         </TabsContent>
 
         <TabsContent value="audit">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Transaction Audit Log</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AuditLog members={allProfiles} />
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-border/50 bg-card p-5">
+            <AuditLog members={allProfiles} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

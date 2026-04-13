@@ -11,10 +11,10 @@ export default async function StorePage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight">Store</h1>
-        <p className="text-sm text-muted-foreground">
-          Browse items and spend your Alt-F4 Bucks.
+      <div>
+        <h1 className="text-lg font-semibold text-foreground">Store</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Spend your Alt-F4 Bucks
         </p>
       </div>
 

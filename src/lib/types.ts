@@ -52,3 +52,60 @@ export type LeaderboardEntry = {
   display_name: string;
   balance: number;
 };
+
+// --- Betting (Pool / Parimutuel) ---
+
+export type BetSide = "red" | "blue";
+
+export type PoolBet = {
+  id: string;
+  user_id: string;
+  match_key: string;
+  side: BetSide;
+  amount: number;
+  payout: number | null;
+  created_at: string;
+};
+
+export type PoolBetWithProfile = PoolBet & {
+  user: Pick<Profile, "display_name"> | null;
+};
+
+export type MatchCache = {
+  match_key: string;
+  event_key: string;
+  event_name: string;
+  comp_level: string;
+  match_number: number;
+  red_teams: string[];
+  blue_teams: string[];
+  scheduled_time: string | null;
+  actual_time: string | null;
+  red_score: number | null;
+  blue_score: number | null;
+  winning_alliance: string | null;
+  is_complete: boolean;
+  fetched_at: string;
+};
+
+export type PoolSummary = {
+  match_key: string;
+  red_pool: number;
+  blue_pool: number;
+  total_pool: number;
+  red_bettors: number;
+  blue_bettors: number;
+  total_bettors: number;
+};
+
+export type MatchOdds = {
+  redPct: number;
+  bluePct: number;
+  redPool: number;
+  bluePool: number;
+  totalPool: number;
+  redBettors: number;
+  blueBettors: number;
+  statboticsRedPct: number | null;
+  statboticsBluePct: number | null;
+};

@@ -1,20 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { PurchaseDialog } from "@/components/purchase-dialog";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import { getStoreItem } from "@/db/store";
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -34,47 +25,44 @@ export default async function StoreItemPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
+      <Button asChild variant="ghost" size="sm" className="-ml-2 h-8 text-xs text-muted-foreground">
         <Link href="/store">
-          <ArrowLeft className="mr-1.5 h-4 w-4" />
-          Back to Store
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+          Back
         </Link>
       </Button>
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-lg">{item.name}</CardTitle>
-            {item.stock !== null && (
-              <Badge variant="secondary">{item.stock} in stock</Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {item.description || "No description available."}
-          </p>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Price</span>
-            </div>
-            <span className="font-mono text-lg font-bold tabular-nums">
-              {item.price.toLocaleString()}
+      <div className="max-w-md rounded-lg border border-border/50 bg-card p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-base font-semibold text-foreground">{item.name}</h1>
+          {item.stock !== null && (
+            <span className="shrink-0 rounded bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {item.stock} in stock
+            </span>
+          )}
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          {item.description || "No description available."}
+        </p>
+
+        <div className="space-y-2 rounded-md bg-secondary/50 p-3">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Price</span>
+            <span className="font-mono font-bold text-foreground tabular-nums">
+              ${item.price.toLocaleString()}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Your balance</span>
-            <span className="font-mono text-sm tabular-nums">
-              {balance.toLocaleString()} Bucks
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Your balance</span>
+            <span className="font-mono text-foreground tabular-nums">
+              ${balance.toLocaleString()}
             </span>
           </div>
-        </CardContent>
-        <CardFooter>
-          <PurchaseDialog item={item} balance={balance} />
-        </CardFooter>
-      </Card>
+        </div>
+
+        <PurchaseDialog item={item} balance={balance} />
+      </div>
     </div>
   );
 }

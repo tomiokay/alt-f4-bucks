@@ -2,18 +2,15 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { login, signup } from "@/app/actions/auth";
+import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<"login" | "signup">("login");
 
   async function handleLogin(formData: FormData) {
     setError(null);
@@ -34,86 +31,122 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-lg">Sign in to Alt-F4 Bucks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Sign up</TabsTrigger>
-            </TabsList>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#22c55e] text-white text-sm font-black">
+            F4
+          </div>
+          <h1 className="text-[18px] font-semibold text-[#e6edf3]">
+            Alt-F4 Bucks
+          </h1>
+          <p className="text-[13px] text-[#7d8590] mt-1">
+            FRC Team 7558 prediction market
+          </p>
+        </div>
 
-            <TabsContent value="login">
-              <form action={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
+        <div className="rounded-xl bg-[#161b22] overflow-hidden">
+          {/* Tab toggle */}
+          <div className="flex border-b border-[#21262d]">
+            <button
+              onClick={() => setTab("login")}
+              className={cn(
+                "flex-1 py-3 text-[13px] font-medium transition-colors border-b-2",
+                tab === "login"
+                  ? "text-[#e6edf3] border-[#e6edf3]"
+                  : "text-[#7d8590] border-transparent"
+              )}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => setTab("signup")}
+              className={cn(
+                "flex-1 py-3 text-[13px] font-medium transition-colors border-b-2",
+                tab === "signup"
+                  ? "text-[#e6edf3] border-[#e6edf3]"
+                  : "text-[#7d8590] border-transparent"
+              )}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <div className="p-5">
+            {tab === "login" ? (
+              <form action={handleLogin} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[12px] text-[#7d8590]">Email</label>
+                  <input
                     name="email"
                     type="email"
                     required
                     placeholder="you@team7558.com"
+                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
+                <div className="space-y-1.5">
+                  <label className="text-[12px] text-[#7d8590]">Password</label>
+                  <input
                     name="password"
                     type="password"
                     required
                     minLength={6}
+                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign in"}
-                </Button>
+                {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-10 rounded-lg bg-[#22c55e] text-white text-[14px] font-semibold hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                >
+                  {loading ? "Signing in..." : "Log In"}
+                </button>
               </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form action={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Display name</Label>
-                  <Input
-                    id="signup-name"
+            ) : (
+              <form action={handleSignup} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[12px] text-[#7d8590]">Display name</label>
+                  <input
                     name="displayName"
                     required
                     placeholder="Your name"
+                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
+                <div className="space-y-1.5">
+                  <label className="text-[12px] text-[#7d8590]">Email</label>
+                  <input
                     name="email"
                     type="email"
                     required
                     placeholder="you@team7558.com"
+                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
+                <div className="space-y-1.5">
+                  <label className="text-[12px] text-[#7d8590]">Password</label>
+                  <input
                     name="password"
                     type="password"
                     required
                     minLength={6}
+                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Create account"}
-                </Button>
+                {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-10 rounded-lg bg-[#22c55e] text-white text-[14px] font-semibold hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                >
+                  {loading ? "Creating account..." : "Sign Up"}
+                </button>
               </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

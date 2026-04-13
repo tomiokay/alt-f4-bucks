@@ -1,0 +1,142 @@
+"use client";
+
+import type { MatchCache, MatchOdds } from "@/lib/types";
+
+type Props = {
+  match: MatchCache;
+  odds: MatchOdds;
+  onBetRed?: () => void;
+  onBetBlue?: () => void;
+  compact?: boolean;
+};
+
+const COMP_LABELS: Record<string, string> = {
+  qm: "Qual",
+  sf: "Semi",
+  f: "Final",
+};
+
+export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) {
+  const compLabel = COMP_LABELS[match.comp_level] ?? match.comp_level;
+  const isBettable = !match.is_complete;
+
+  return (
+    <div className="rounded-xl bg-[#161b22] p-4 hover:bg-[#1c2128] transition-colors">
+      {/* Title row */}
+      <div className="flex items-start gap-3 mb-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#21262d] text-[10px] font-bold text-[#7d8590]">
+          {compLabel}
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-medium text-[#e6edf3] leading-tight">
+            {compLabel} {match.match_number}
+            {match.is_complete && (
+              <span className="ml-2 text-[11px] text-[#7d8590]">Final</span>
+            )}
+          </h3>
+          <p className="text-[11px] text-[#7d8590] truncate mt-0.5">
+            {match.event_name}
+          </p>
+        </div>
+      </div>
+
+      {/* Option rows */}
+      <div className="space-y-1.5">
+        {/* Red alliance */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="h-2 w-2 rounded-full bg-[#ef4444] shrink-0" />
+            <span className="text-[13px] text-[#e6edf3] truncate font-mono">
+              {match.red_teams.join(", ")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[13px] font-medium text-[#e6edf3] tabular-nums w-10 text-right">
+              {match.is_complete && match.red_score !== null
+                ? match.red_score
+                : `${odds.redPct}%`}
+            </span>
+            {isBettable && onBetRed && (
+              <>
+                <button
+                  onClick={onBetRed}
+                  className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={onBetBlue}
+                  className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors"
+                >
+                  No
+                </button>
+              </>
+            )}
+            {match.is_complete && match.winning_alliance === "red" && (
+              <span className="rounded-md bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
+                Won
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Blue alliance */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="h-2 w-2 rounded-full bg-[#3b82f6] shrink-0" />
+            <span className="text-[13px] text-[#e6edf3] truncate font-mono">
+              {match.blue_teams.join(", ")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[13px] font-medium text-[#e6edf3] tabular-nums w-10 text-right">
+              {match.is_complete && match.blue_score !== null
+                ? match.blue_score
+                : `${odds.bluePct}%`}
+            </span>
+            {isBettable && onBetBlue && (
+              <>
+                <button
+                  onClick={onBetBlue}
+                  className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={onBetRed}
+                  className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors"
+                >
+                  No
+                </button>
+              </>
+            )}
+            {match.is_complete && match.winning_alliance === "blue" && (
+              <span className="rounded-md bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
+                Won
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 flex items-center justify-between text-[11px] text-[#484f58]">
+        <span>
+          {odds.totalPool > 0
+            ? `$${odds.totalPool.toLocaleString()} Vol.`
+            : ""}
+        </span>
+        <div className="flex items-center gap-2">
+          {odds.statboticsRedPct !== null && !compact && (
+            <span className="tabular-nums">
+              Statbotics {odds.statboticsRedPct}/{odds.statboticsBluePct}
+            </span>
+          )}
+          {(odds.redBettors + odds.blueBettors) > 0 && (
+            <span>{odds.redBettors + odds.blueBettors} bettors</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

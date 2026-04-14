@@ -98,6 +98,20 @@ export type PoolSummary = {
   total_bettors: number;
 };
 
+export type Comment = {
+  id: string;
+  user_id: string;
+  match_key: string;
+  body: string;
+  parent_id: string | null;
+  created_at: string;
+};
+
+export type CommentWithProfile = Comment & {
+  user: Pick<Profile, "display_name"> | null;
+  replies?: CommentWithProfile[];
+};
+
 export type MatchOdds = {
   redPct: number;
   bluePct: number;

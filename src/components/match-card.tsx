@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { MatchCache, MatchOdds } from "@/lib/types";
 
 type Props = {
@@ -16,12 +17,23 @@ const COMP_LABELS: Record<string, string> = {
   f: "Final",
 };
 
+function Stop({ onClick, className, children }: { onClick?: () => void; className: string; children: React.ReactNode }) {
+  return (
+    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick?.(); }} className={className}>
+      {children}
+    </button>
+  );
+}
+
 export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) {
   const compLabel = COMP_LABELS[match.comp_level] ?? match.comp_level;
   const isBettable = !match.is_complete;
 
   return (
-    <div className="rounded-xl bg-[#161b22] p-4 hover:bg-[#1c2128] transition-colors">
+    <Link
+      href={`/market/${encodeURIComponent(match.match_key)}`}
+      className="block rounded-xl bg-[#161b22] p-4 hover:bg-[#1c2128] transition-colors"
+    >
       {/* Title row */}
       <div className="flex items-start gap-3 mb-3">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#21262d] text-[10px] font-bold text-[#7d8590]">
@@ -58,24 +70,16 @@ export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) 
             </span>
             {isBettable && onBetRed && (
               <>
-                <button
-                  onClick={onBetRed}
-                  className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors"
-                >
+                <Stop onClick={onBetRed} className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors">
                   Yes
-                </button>
-                <button
-                  onClick={onBetBlue}
-                  className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors"
-                >
+                </Stop>
+                <Stop onClick={onBetBlue} className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors">
                   No
-                </button>
+                </Stop>
               </>
             )}
             {match.is_complete && match.winning_alliance === "red" && (
-              <span className="rounded-md bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
-                Won
-              </span>
+              <span className="rounded-md bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">Won</span>
             )}
           </div>
         </div>
@@ -96,24 +100,16 @@ export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) 
             </span>
             {isBettable && onBetBlue && (
               <>
-                <button
-                  onClick={onBetBlue}
-                  className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors"
-                >
+                <Stop onClick={onBetBlue} className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors">
                   Yes
-                </button>
-                <button
-                  onClick={onBetRed}
-                  className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors"
-                >
+                </Stop>
+                <Stop onClick={onBetRed} className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors">
                   No
-                </button>
+                </Stop>
               </>
             )}
             {match.is_complete && match.winning_alliance === "blue" && (
-              <span className="rounded-md bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
-                Won
-              </span>
+              <span className="rounded-md bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">Won</span>
             )}
           </div>
         </div>
@@ -122,9 +118,7 @@ export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) 
       {/* Footer */}
       <div className="mt-3 flex items-center justify-between text-[11px] text-[#484f58]">
         <span>
-          {odds.totalPool > 0
-            ? `$${odds.totalPool.toLocaleString()} Vol.`
-            : ""}
+          {odds.totalPool > 0 ? `$${odds.totalPool.toLocaleString()} Vol.` : ""}
         </span>
         <div className="flex items-center gap-2">
           {odds.statboticsRedPct !== null && !compact && (
@@ -137,6 +131,6 @@ export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) 
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

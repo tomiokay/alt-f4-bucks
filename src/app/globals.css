@@ -88,29 +88,32 @@
   --sidebar-ring: #388bfd;
 }
 
+html {
+  font-size: 125%;
+}
+
+button,
+a,
+[role="button"],
+select,
+input[type="submit"],
+input[type="button"],
+input[type="checkbox"],
+input[type="radio"],
+label[for] {
+  cursor: pointer;
+}
+
+button:active:not(:disabled),
+a:active {
+  transform: scale(0.97);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  html {
-    font-size: 125%;
-  }
   body {
     @apply bg-background text-foreground;
-  }
-  button,
-  a,
-  [role="button"],
-  select,
-  input[type="submit"],
-  input[type="button"],
-  input[type="checkbox"],
-  input[type="radio"],
-  label[for] {
-    cursor: pointer;
-  }
-  button:active:not(:disabled),
-  a:active {
-    transform: scale(0.97);
   }
 }

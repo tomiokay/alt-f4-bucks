@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { EnrichedMatch } from "@/app/page";
 
 type Props = {
@@ -14,13 +15,38 @@ const COMP_LABELS: Record<string, string> = {
   f: "Final",
 };
 
+function StopPropButton({
+  onClick,
+  className,
+  children,
+}: {
+  onClick?: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick?.();
+      }}
+      className={className}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
   const { match, odds } = item;
   const compLabel = COMP_LABELS[match.comp_level] ?? match.comp_level;
-  const isBettable = !match.is_complete;
 
   return (
-    <div className="rounded-xl bg-[#161b22] p-4 hover:bg-[#1c2128] transition-colors group">
+    <Link
+      href={`/market/${encodeURIComponent(match.match_key)}`}
+      className="block rounded-xl bg-[#161b22] p-4 hover:bg-[#1c2128] transition-colors"
+    >
       {/* Title */}
       <div className="mb-3">
         <div className="flex items-center gap-2 mb-1">
@@ -34,9 +60,9 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
         </h3>
       </div>
 
-      {/* Alliance rows with Yes/No buttons */}
+      {/* Alliance rows */}
       <div className="space-y-2">
-        {/* Red alliance */}
+        {/* Red */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <span className="h-2 w-2 rounded-full bg-[#ef4444] shrink-0" />
@@ -58,24 +84,24 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
               </div>
             ) : (
               <>
-                <button
+                <StopPropButton
                   onClick={onBetRed}
                   className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors tabular-nums"
                 >
                   Yes {odds.redPct}¢
-                </button>
-                <button
+                </StopPropButton>
+                <StopPropButton
                   onClick={onBetBlue}
                   className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors tabular-nums"
                 >
                   No {odds.bluePct}¢
-                </button>
+                </StopPropButton>
               </>
             )}
           </div>
         </div>
 
-        {/* Blue alliance */}
+        {/* Blue */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <span className="h-2 w-2 rounded-full bg-[#3b82f6] shrink-0" />
@@ -97,18 +123,18 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
               </div>
             ) : (
               <>
-                <button
+                <StopPropButton
                   onClick={onBetBlue}
                   className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors tabular-nums"
                 >
                   Yes {odds.bluePct}¢
-                </button>
-                <button
+                </StopPropButton>
+                <StopPropButton
                   onClick={onBetRed}
                   className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors tabular-nums"
                 >
                   No {odds.redPct}¢
-                </button>
+                </StopPropButton>
               </>
             )}
           </div>
@@ -124,6 +150,6 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
           <span>{odds.redBettors + odds.blueBettors} traders</span>
         )}
       </div>
-    </div>
+    </Link>
   );
 }

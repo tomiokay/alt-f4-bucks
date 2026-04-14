@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { PoolBetWithProfile, MatchCache, PoolSummary } from "@/lib/types";
+import type { PoolBetWithProfile, MatchCache, PoolSummary, CommentWithProfile } from "@/lib/types";
 
 // --- Pool Bets ---
 
@@ -99,4 +99,56 @@ export async function getActiveEventKeys(): Promise<string[]> {
 
   const keys = new Set((data ?? []).map((d: { event_key: string }) => d.event_key));
   return Array.from(keys);
+}
+
+// --- Related matches (same event, excluding current) ---
+
+export async function getRelatedMatches(eventKey: string, excludeKey: string, limit = 5): Promise<MatchCache[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("match_cache")
+    .select("*")
+    .eq("event_key", eventKey)
+    .neq("match_key", excludeKey)
+    .eq("is_complete", false)
+    .order("scheduled_time", { ascending: true })
+    .limit(limit);
+
+  return (data ?? []) as MatchCache[];
+}
+
+// --- Comments ---
+
+export async function getMatchComments(matchKey: string): Promise<CommentWithProfile[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("comments")
+    .select(`
+      *,
+      user:profiles!comments_user_id_fkey(display_name)
+    `)
+    .eq("match_key", matchKey)
+    .order("created_at", { ascending: false });
+
+  const all = (data ?? []) as CommentWithProfile[];
+
+  // Build threaded structure
+  const topLevel: CommentWithProfile[] = [];
+  const byParent = new Map<string, CommentWithProfile[]>();
+
+  for (const c of all) {
+    if (c.parent_id) {
+      const existing = byParent.get(c.parent_id) ?? [];
+      existing.push(c);
+      byParent.set(c.parent_id, existing);
+    } else {
+      topLevel.push(c);
+    }
+  }
+
+  for (const c of topLevel) {
+    c.replies = byParent.get(c.id) ?? [];
+  }
+
+  return topLevel;
 }

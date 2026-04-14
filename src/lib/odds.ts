@@ -58,16 +58,16 @@ export function potentialPayout(
     return { payout: amount, profit: 0, multiplier: 1 };
   }
 
+  // If you're the only bettor on this side, payout = your own money back (1x)
+  // Show 2x instead since that's what happens when someone takes the other side
+  const otherSidePool = side === "red" ? odds.bluePool : odds.redPool;
+  if (otherSidePool === 0) {
+    return { payout: amount * 2, profit: amount, multiplier: 2 };
+  }
+
   const payout = Math.floor((amount * newTotalPool) / newSidePool);
   const profit = payout - amount;
-  let multiplier = parseFloat((payout / amount).toFixed(2));
-
-  // If pool is empty or one-sided, show implied return based on odds
-  if (multiplier <= 1 && odds.totalPool === 0) {
-    // No bets yet — show 2x as the expected fair return
-    multiplier = 2;
-    return { payout: amount * 2, profit: amount, multiplier };
-  }
+  const multiplier = parseFloat((payout / amount).toFixed(2));
 
   return { payout, profit, multiplier };
 }

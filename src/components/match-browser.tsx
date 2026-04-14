@@ -79,7 +79,7 @@ export function MatchBrowser({ matches, pools, predictions, balance }: Props) {
           </p>
           {tab === "upcoming" && (
             <p className="text-[12px] text-[#484f58] mt-1">
-              Sync an event to get started
+              Waiting for an event to start
             </p>
           )}
         </div>

@@ -115,7 +115,7 @@ export function PopularMarkets({
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-[14px] text-[#7d8590]">No markets yet</p>
             <p className="text-[12px] text-[#484f58] mt-1">
-              Sync an event from Markets to get started
+              Waiting for an event to start
             </p>
           </div>
         )}

@@ -71,12 +71,38 @@ export async function GET() {
       };
 
       try {
+        // Get bets before resolving so we can notify
+        const { data: betsToResolve } = await service
+          .from("pool_bets")
+          .select("id, user_id, side, amount")
+          .eq("match_key", matchKey)
+          .is("payout", null);
+
         const { data: count } = await service.rpc("resolve_match_pool", {
           p_match_key: matchKey,
           p_winning_side: winningSide,
           p_result: result,
         });
         totalResolved += (count as number) ?? 0;
+
+        // Send notifications to bettors
+        if (betsToResolve && betsToResolve.length > 0) {
+          const notifications = betsToResolve.map((bet) => {
+            const won = bet.side === winningSide;
+            const tied = winningSide === "tie";
+            return {
+              user_id: bet.user_id,
+              type: tied ? "bet_refund" : won ? "bet_won" : "bet_lost",
+              message: tied
+                ? `Match ${matchKey} ended in a tie. Your $${bet.amount} bet was refunded.`
+                : won
+                  ? `You won your $${bet.amount} bet on ${bet.side} in ${matchKey}!`
+                  : `You lost your $${bet.amount} bet on ${bet.side} in ${matchKey}.`,
+              meta: { match_key: matchKey, bet_id: bet.id },
+            };
+          });
+          await service.from("notifications").insert(notifications).throwOnError();
+        }
       } catch {
         // Skip failed resolutions
       }

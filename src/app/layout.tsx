@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Nav } from "@/components/nav";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
+import { getUserNotifications, getUnreadCount } from "@/db/notifications";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,14 +28,24 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const profile = await getCurrentProfile();
-  const balance = profile ? await getUserBalance(profile.id) : 0;
+
+  const [balance, notifications, unreadCount] = await Promise.all([
+    profile ? getUserBalance(profile.id) : Promise.resolve(0),
+    profile ? getUserNotifications(profile.id, 15) : Promise.resolve([]),
+    profile ? getUnreadCount(profile.id) : Promise.resolve(0),
+  ]);
 
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <Nav profile={profile} balance={balance} />
+        <Nav
+          profile={profile}
+          balance={balance}
+          notifications={notifications}
+          unreadCount={unreadCount}
+        />
         <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
         <Toaster />
       </body>

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -36,6 +37,36 @@ export async function postComment(formData: FormData) {
   });
 
   if (error) return { error: error.message };
+
+  // Notify parent comment author on reply
+  if (parsed.data.parentId) {
+    try {
+      const service = await createServiceClient();
+      const { data: parent } = await service
+        .from("comments")
+        .select("user_id")
+        .eq("id", parsed.data.parentId)
+        .single();
+
+      if (parent && parent.user_id !== user.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("id", user.id)
+          .single();
+
+        const name = profile?.display_name ?? "Someone";
+        await service.from("notifications").insert({
+          user_id: parent.user_id,
+          type: "comment_reply",
+          message: `${name} replied to your comment on ${parsed.data.matchKey}`,
+          meta: { match_key: parsed.data.matchKey, parent_id: parsed.data.parentId },
+        });
+      }
+    } catch {
+      // Non-critical — don't fail the comment
+    }
+  }
 
   revalidatePath(`/market/${parsed.data.matchKey}`);
   return { success: true };

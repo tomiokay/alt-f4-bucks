@@ -112,6 +112,18 @@ export type CommentWithProfile = Comment & {
   replies?: CommentWithProfile[];
 };
 
+export type NotificationType = "bet_won" | "bet_lost" | "bet_refund" | "comment_reply" | "welcome";
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  message: string;
+  read: boolean;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
 export type MatchOdds = {
   redPct: number;
   bluePct: number;

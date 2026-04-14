@@ -12,14 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Trophy, BarChart3, Menu, ChevronDown, Search, Bell } from "lucide-react";
+import { LogOut, Trophy, BarChart3, Menu, ChevronDown, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { useState } from "react";
-import type { Profile } from "@/lib/types";
+import type { Profile, Notification } from "@/lib/types";
 
 type NavProps = {
   profile: Profile | null;
   balance?: number;
+  notifications?: Notification[];
+  unreadCount?: number;
 };
 
 const CATEGORY_LINKS = [
@@ -32,7 +35,7 @@ const CATEGORY_LINKS = [
   // Store hidden for now
 ];
 
-export function Nav({ profile, balance = 0 }: NavProps) {
+export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 }: NavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -88,10 +91,11 @@ export function Nav({ profile, balance = 0 }: NavProps) {
                 </span>
               </div>
 
-              {/* Notifications bell */}
-              <button className="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[#161b22] transition-colors">
-                <Bell className="h-4 w-4 text-[#7d8590]" />
-              </button>
+              {/* Notifications */}
+              <NotificationsDropdown
+                notifications={notifications}
+                unreadCount={unreadCount}
+              />
 
               {/* Profile dropdown */}
               <DropdownMenu>

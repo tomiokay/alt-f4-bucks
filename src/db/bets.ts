@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { PoolBetWithProfile, MatchCache, PoolSummary, CommentWithProfile } from "@/lib/types";
+import type { PoolBetWithProfile, MatchCache, PoolSummary, CommentWithProfile, OddsHistoryPoint } from "@/lib/types";
 
 // --- Pool Bets ---
 
@@ -151,4 +151,17 @@ export async function getMatchComments(matchKey: string): Promise<CommentWithPro
   }
 
   return topLevel;
+}
+
+// --- Odds History ---
+
+export async function getOddsHistory(matchKey: string): Promise<OddsHistoryPoint[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("odds_history")
+    .select("*")
+    .eq("match_key", matchKey)
+    .order("created_at", { ascending: true });
+
+  return (data ?? []) as OddsHistoryPoint[];
 }

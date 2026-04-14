@@ -124,6 +124,17 @@ export type Notification = {
   created_at: string;
 };
 
+export type OddsHistoryPoint = {
+  id: string;
+  match_key: string;
+  red_pct: number;
+  blue_pct: number;
+  red_pool: number;
+  blue_pool: number;
+  total_pool: number;
+  created_at: string;
+};
+
 export type MatchOdds = {
   redPct: number;
   bluePct: number;

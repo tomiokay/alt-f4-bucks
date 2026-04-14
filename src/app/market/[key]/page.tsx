@@ -7,6 +7,7 @@ import {
   getMatchPoolBets,
   getMatchComments,
   getRelatedMatches,
+  getOddsHistory,
 } from "@/db/bets";
 import { calculateOdds } from "@/lib/odds";
 import { MarketHeader } from "@/components/market/market-header";
@@ -31,12 +32,13 @@ export default async function MarketPage({ params }: Props) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [balance, pool, bets, comments, related] = await Promise.all([
+  const [balance, pool, bets, comments, related, oddsHistory] = await Promise.all([
     getUserBalance(profile.id),
     getPoolSummary(matchKey),
     getMatchPoolBets(matchKey),
     getMatchComments(matchKey),
     getRelatedMatches(match.event_key, matchKey),
+    getOddsHistory(matchKey),
   ]);
 
   const odds = calculateOdds(pool, null);
@@ -55,7 +57,11 @@ export default async function MarketPage({ params }: Props) {
         {/* Left column — main content */}
         <div className="flex-1 min-w-0 space-y-5">
           <MarketHeader match={match} odds={odds} />
-          <MarketChart redPct={odds.redPct} bluePct={odds.bluePct} />
+          <MarketChart
+            redPct={odds.redPct}
+            bluePct={odds.bluePct}
+            history={oddsHistory}
+          />
 
           {/* Outcome proposed (if resolved) */}
           {match.is_complete && (

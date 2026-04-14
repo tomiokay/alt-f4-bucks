@@ -77,22 +77,31 @@ export default async function HomePage() {
     })
     .slice(0, 5);
 
-  const eventMap = new Map<string, { key: string; name: string; count: number; volume: number }>();
-  for (const e of enriched) {
+  const eventMap = new Map<string, { key: string; name: string; count: number; volume: number; startTime: string | null }>();
+  for (const e of upcoming) {
     const existing = eventMap.get(e.match.event_key);
+    const time = e.match.scheduled_time;
     if (existing) {
       existing.count++;
       existing.volume += e.odds.totalPool;
+      if (time && (!existing.startTime || time < existing.startTime)) {
+        existing.startTime = time;
+      }
     } else {
       eventMap.set(e.match.event_key, {
         key: e.match.event_key,
         name: e.match.event_name,
         count: 1,
         volume: e.odds.totalPool,
+        startTime: time,
       });
     }
   }
-  const hotTopics = [...eventMap.values()].sort((a, b) => b.volume - a.volume);
+  const hotTopics = [...eventMap.values()].sort((a, b) => {
+    const aTime = a.startTime ?? "9999";
+    const bTime = b.startTime ?? "9999";
+    return aTime.localeCompare(bTime);
+  });
 
   return (
     <div className="space-y-0">

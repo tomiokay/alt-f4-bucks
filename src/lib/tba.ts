@@ -122,7 +122,7 @@ export function tbaMatchToCache(
     red_score: hasScore ? match.alliances.red.score : null,
     blue_score: hasScore ? match.alliances.blue.score : null,
     winning_alliance: match.winning_alliance || null,
-    is_complete: hasScore && match.winning_alliance !== "",
+    is_complete: hasScore || (match.actual_time !== null),
     fetched_at: new Date().toISOString(),
   };
 }

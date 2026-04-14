@@ -43,19 +43,30 @@ export function MarketHeader({ match, odds }: Props) {
             <span className="rounded bg-[#21262d] px-2 py-0.5 text-[11px] font-medium text-[#7d8590]">
               {match.event_name}
             </span>
-            {match.is_complete ? (
-              <span className="rounded bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
-                Resolved
-              </span>
-            ) : match.scheduled_time && new Date(match.scheduled_time) < new Date() ? (
-              <span className="rounded bg-[#3b1c1c] px-2 py-0.5 text-[10px] font-semibold text-[#f59e0b]">
-                In Progress
-              </span>
-            ) : (
-              <span className="rounded bg-[#1c2128] px-2 py-0.5 text-[10px] font-semibold text-[#388bfd]">
-                Open
-              </span>
-            )}
+            {(() => {
+              const scheduled = match.scheduled_time ? new Date(match.scheduled_time) : null;
+              const now = new Date();
+              const isPast = scheduled && scheduled < now;
+              if (match.is_complete) {
+                return (
+                  <span className="rounded bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
+                    Resolved
+                  </span>
+                );
+              }
+              if (isPast) {
+                return (
+                  <span className="rounded bg-[#3b1c1c] px-2 py-0.5 text-[10px] font-semibold text-[#7d8590]">
+                    Closed
+                  </span>
+                );
+              }
+              return (
+                <span className="rounded bg-[#1c2128] px-2 py-0.5 text-[10px] font-semibold text-[#388bfd]">
+                  Open
+                </span>
+              );
+            })()}
           </div>
           <h1 className="text-[20px] font-semibold text-[#e6edf3] leading-tight">
             Who wins {comp} {match.match_number}?

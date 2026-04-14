@@ -9,6 +9,7 @@ import {
   getUpcomingMatches,
   getUserPoolBets,
   getAllPoolSummaries,
+  searchMatches,
 } from "@/db/bets";
 import type { MatchCache, PoolSummary } from "@/lib/types";
 
@@ -21,33 +22,30 @@ export default async function BettingPage({ searchParams }: Props) {
   if (!profile) redirect("/login");
 
   const { q } = await searchParams;
-  const query = q?.toLowerCase().trim() ?? "";
+  const query = q?.trim() ?? "";
 
-  const [balance, bets, eventKeys, poolMap] = await Promise.all([
+  const [balance, bets, poolMap] = await Promise.all([
     getUserBalance(profile.id),
     getUserPoolBets(profile.id),
-    getActiveEventKeys(),
     getAllPoolSummaries(),
   ]);
 
   let allMatches: MatchCache[] = [];
-  if (eventKeys.length > 0) {
-    const matchArrays = await Promise.all(
-      eventKeys.map((ek) => getCachedMatches(ek))
-    );
-    allMatches = matchArrays.flat();
-  } else {
-    allMatches = await getUpcomingMatches(50);
-  }
 
-  // Filter by search query
   if (query) {
-    allMatches = allMatches.filter((m) =>
-      m.event_name.toLowerCase().includes(query) ||
-      m.red_teams.some((t) => t.includes(query)) ||
-      m.blue_teams.some((t) => t.includes(query)) ||
-      m.match_key.toLowerCase().includes(query)
-    );
+    // Search directly in DB
+    allMatches = await searchMatches(query.toLowerCase());
+  } else {
+    // Load all events
+    const eventKeys = await getActiveEventKeys();
+    if (eventKeys.length > 0) {
+      const matchArrays = await Promise.all(
+        eventKeys.map((ek) => getCachedMatches(ek))
+      );
+      allMatches = matchArrays.flat();
+    } else {
+      allMatches = await getUpcomingMatches(50);
+    }
   }
 
   const pools: Record<string, PoolSummary> = {};
@@ -91,6 +89,11 @@ export default async function BettingPage({ searchParams }: Props) {
         <h2 className="text-[16px] font-semibold text-[#e6edf3]">
           {query ? `Results for "${q}"` : "All markets"}
         </h2>
+        {query && (
+          <a href="/betting" className="text-[12px] text-[#388bfd] hover:text-[#58a6ff]">
+            Clear search
+          </a>
+        )}
       </div>
 
       <MatchBrowser

@@ -63,7 +63,8 @@ export async function getCachedMatches(eventKey: string): Promise<MatchCache[]> 
     .from("match_cache")
     .select("*")
     .eq("event_key", eventKey)
-    .order("scheduled_time", { ascending: true });
+    .order("scheduled_time", { ascending: true })
+    .limit(500);
 
   return (data ?? []) as MatchCache[];
 }
@@ -93,12 +94,46 @@ export async function getMatchByKey(matchKey: string): Promise<MatchCache | null
 
 export async function getActiveEventKeys(): Promise<string[]> {
   const supabase = await createClient();
+  // Supabase defaults to 1000 rows — fetch up to 10000 to get all events
   const { data } = await supabase
     .from("match_cache")
-    .select("event_key");
+    .select("event_key")
+    .limit(10000);
 
   const keys = new Set((data ?? []).map((d: { event_key: string }) => d.event_key));
   return Array.from(keys);
+}
+
+// --- Search matches ---
+
+export async function searchMatches(query: string, limit = 100): Promise<MatchCache[]> {
+  const supabase = await createClient();
+  // Search by event name or match key
+  const { data } = await supabase
+    .from("match_cache")
+    .select("*")
+    .or(`event_name.ilike.%${query}%,match_key.ilike.%${query}%`)
+    .order("scheduled_time", { ascending: true })
+    .limit(limit);
+
+  // Also search by team number in arrays (can't do array contains via REST easily, do client-side)
+  const results = (data ?? []) as MatchCache[];
+
+  // If no results from name/key, try team number search
+  if (results.length === 0) {
+    const { data: allData } = await supabase
+      .from("match_cache")
+      .select("*")
+      .order("scheduled_time", { ascending: true })
+      .limit(10000);
+
+    return ((allData ?? []) as MatchCache[]).filter((m) =>
+      m.red_teams.some((t) => t.includes(query)) ||
+      m.blue_teams.some((t) => t.includes(query))
+    ).slice(0, limit);
+  }
+
+  return results;
 }
 
 // --- Related matches (same event, excluding current) ---

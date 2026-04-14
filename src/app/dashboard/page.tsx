@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { MyBets } from "@/components/my-bets";
+import { cn } from "@/lib/utils";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import { getUserPoolBets } from "@/db/bets";
@@ -13,12 +14,12 @@ export default async function DashboardPage() {
     getUserPoolBets(profile.id),
   ]);
 
-  const totalWon = bets
-    .filter((b) => b.payout !== null && b.payout > b.amount)
-    .reduce((s, b) => s + (b.payout! - b.amount), 0);
+  // Calculate net P&L across all settled bets (payout - amount for each)
+  const settledBets = bets.filter((b) => b.payout !== null);
+  const totalPnL = settledBets.reduce((s, b) => s + (b.payout! - b.amount), 0);
 
-  const biggestWin = bets
-    .filter((b) => b.payout !== null && b.payout > b.amount)
+  const biggestWin = settledBets
+    .filter((b) => b.payout! > b.amount)
     .reduce((max, b) => Math.max(max, b.payout! - b.amount), 0);
 
   const totalBets = bets.length;
@@ -82,8 +83,11 @@ export default async function DashboardPage() {
             <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
             <span className="text-[12px] text-[#7d8590]">Profit/Loss</span>
           </div>
-          <div className="text-[28px] font-bold text-[#e6edf3] tabular-nums font-mono">
-            {totalWon > 0 ? "+" : ""}${totalWon.toLocaleString()}
+          <div className={cn(
+            "text-[28px] font-bold tabular-nums font-mono",
+            totalPnL > 0 ? "text-[#22c55e]" : totalPnL < 0 ? "text-[#ef4444]" : "text-[#e6edf3]"
+          )}>
+            {totalPnL > 0 ? "+" : ""}${totalPnL.toLocaleString()}
           </div>
           <div className="text-[12px] text-[#7d8590] mt-1">All time</div>
           {/* Placeholder chart area */}
@@ -99,19 +103,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Positions */}
-      <div>
-        <div className="flex items-center gap-4 border-b border-[#21262d] mb-4">
-          <span className="pb-2 text-[13px] font-medium text-[#e6edf3] border-b-2 border-[#e6edf3]">
-            Positions
-          </span>
-          <span className="pb-2 text-[13px] font-medium text-[#7d8590]">
-            Activity
-          </span>
-        </div>
-
-        <MyBets bets={bets} />
-      </div>
+      {/* Positions & Activity */}
+      <MyBets bets={bets} />
     </div>
   );
 }

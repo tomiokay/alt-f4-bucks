@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -18,15 +18,30 @@ type Props = {
   balance: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  existingBets?: { side: string }[];
 };
 
-export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Props) {
+export function BetSlip({ match, side, odds, balance, open, onOpenChange, existingBets = [] }: Props) {
   const [amount, setAmount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [activeTab, setActiveTab] = useState<"buy">("buy");
   const submitting = useRef(false);
+
+  // Check if user has bets on the other side
+  const otherSide = side === "red" ? "blue" : "red";
+  const hasBetOnOtherSide = existingBets.some((b) => b.side === otherSide);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      setSuccess(false);
+      setConfirming(false);
+    }
+  }, [open]);
 
   if (!match || !side || !odds) return null;
 
@@ -39,6 +54,12 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
   const presets = [1, 5, 10, 20].filter((p) => p <= balance);
 
   async function handleSubmit() {
+    // Show confirmation first
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+
     if (submitting.current) return;
     submitting.current = true;
     setError(null);
@@ -55,11 +76,13 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
 
     if (res.error) {
       setError(res.error);
+      setConfirming(false);
     } else {
       setSuccess(true);
       setTimeout(() => {
         onOpenChange(false);
         setSuccess(false);
+        setConfirming(false);
         setAmount(10);
       }, 1200);
     }
@@ -71,11 +94,70 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
         {success ? (
           <div className="flex flex-col items-center justify-center py-12 px-5">
             <div className="h-10 w-10 rounded-full bg-[#16332a] flex items-center justify-center mb-3">
-              <span className="text-[#22c55e] text-lg">✓</span>
+              <span className="text-[#22c55e] text-lg">&#10003;</span>
             </div>
             <div className="text-[14px] text-[#e6edf3] font-medium">Trade confirmed</div>
             <div className="text-[12px] text-[#7d8590] mt-1">
               ${amount} on {sideLabel} — {teams.join(", ")}
+            </div>
+          </div>
+        ) : confirming ? (
+          /* Confirmation screen */
+          <div className="p-5 space-y-4">
+            <h3 className="text-[15px] font-semibold text-[#e6edf3] text-center">Confirm Trade</h3>
+
+            {hasBetOnOtherSide && (
+              <div className="rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30 px-3 py-2">
+                <p className="text-[12px] text-[#f59e0b] font-medium">
+                  You already have bets on {otherSide === "red" ? "Red" : "Blue"}. Betting both sides means guaranteed loss on one. Continue?
+                </p>
+              </div>
+            )}
+
+            <div className="rounded-lg bg-[#0d1117] p-3 space-y-2">
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[#7d8590]">Market</span>
+                <span className="text-[#e6edf3]">{match.event_name}</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[#7d8590]">Side</span>
+                <span className={side === "red" ? "text-[#ef4444] font-medium" : "text-[#3b82f6] font-medium"}>
+                  {sideLabel} — {teams.join(", ")}
+                </span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[#7d8590]">Amount</span>
+                <span className="text-[#e6edf3] font-mono tabular-nums">${amount}</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[#7d8590]">Potential return</span>
+                <span className="text-[#22c55e] font-mono tabular-nums font-medium">
+                  ${result.payout.toLocaleString()} ({result.multiplier}x)
+                </span>
+              </div>
+            </div>
+
+            {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirming(false)}
+                className="flex-1 rounded-lg py-2.5 text-[13px] font-medium bg-[#21262d] text-[#7d8590] hover:text-[#e6edf3] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className={cn(
+                  "flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-colors",
+                  canAfford && !loading
+                    ? "bg-[#22c55e] text-white hover:bg-[#16a34a]"
+                    : "bg-[#21262d] text-[#484f58] cursor-not-allowed"
+                )}
+              >
+                {loading ? "Placing..." : "Confirm"}
+              </button>
             </div>
           </div>
         ) : (
@@ -110,7 +192,7 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
                     {sideLabel} wins
                   </span>
                   <span className="text-[13px] text-[#22c55e] font-medium ml-1 tabular-nums">
-                    {pct}¢
+                    {pct}&#162;
                   </span>
                 </div>
               </div>
@@ -169,7 +251,7 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
                 <div className="flex justify-between text-[12px]">
                   <span className="text-[#7d8590]">Avg price</span>
                   <span className="text-[#e6edf3] tabular-nums font-mono">
-                    {(pct / 100).toFixed(2)}¢
+                    {(pct / 100).toFixed(2)}&#162;
                   </span>
                 </div>
                 <div className="flex justify-between text-[12px]">
@@ -199,11 +281,11 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
                 className={cn(
                   "w-full rounded-lg py-2.5 text-[14px] font-semibold transition-colors",
                   canAfford && !loading
-                    ? "bg-[#22c55e] text-white hover:bg-[#16a34a] cursor-pointer"
+                    ? "bg-[#22c55e] text-white hover:bg-[#16a34a]"
                     : "bg-[#21262d] text-[#484f58] cursor-not-allowed"
                 )}
               >
-                {loading ? "Placing trade..." : `Buy Yes`}
+                Buy Yes
               </button>
             </div>
           </>

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 type Topic = {
   key: string;
   name: string;
@@ -18,9 +20,9 @@ export function HotTopics({ topics }: Props) {
     <div className="rounded-xl bg-[#161b22] p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[13px] font-semibold text-[#e6edf3]">Hot topics</h3>
-        <button className="text-[11px] text-[#388bfd] hover:text-[#58a6ff] transition-colors">
+        <Link href="/betting" className="text-[11px] text-[#388bfd] hover:text-[#58a6ff] transition-colors">
           Explore all
-        </button>
+        </Link>
       </div>
       <div className="space-y-2.5">
         {topics.map((topic) => (

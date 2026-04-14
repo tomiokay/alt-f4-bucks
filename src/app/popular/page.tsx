@@ -8,7 +8,6 @@ import {
   getCachedMatches,
   getAllPoolSummaries,
 } from "@/db/bets";
-import { getEventPredictions } from "@/lib/statbotics";
 import { calculateOdds } from "@/lib/odds";
 import type { MatchCache, PoolSummary, MatchOdds } from "@/lib/types";
 
@@ -22,29 +21,20 @@ export default async function PopularPage() {
     getAllPoolSummaries(),
   ]);
 
-  // Get all matches
   let allMatches: MatchCache[] = [];
   if (eventKeys.length > 0) {
     const arrays = await Promise.all(eventKeys.map((ek) => getCachedMatches(ek)));
     allMatches = arrays.flat();
   }
 
-  // Predictions
+  // Skip Statbotics — use pool odds only for speed
   const predictions: Record<string, { redWinProb: number; blueWinProb: number }> = {};
-  for (const ek of eventKeys) {
-    const preds = await getEventPredictions(ek);
-    for (const [key, val] of preds) {
-      predictions[key] = val;
-    }
-  }
 
-  // Pools as plain object
   const pools: Record<string, PoolSummary> = {};
   for (const [key, val] of poolMap) {
     pools[key] = val;
   }
 
-  // Rank matches by volume (total pool), then by bettor count
   type RankedMatch = {
     match: MatchCache;
     odds: MatchOdds;
@@ -56,27 +46,24 @@ export default async function PopularPage() {
   const ranked: RankedMatch[] = upcoming
     .map((match) => {
       const pool = pools[match.match_key] ?? null;
-      const odds = calculateOdds(pool, predictions[match.match_key] ?? null);
+      const odds = calculateOdds(pool, null);
       return { match, odds, pool };
     })
     .sort((a, b) => {
-      // Sort by total pool descending, then bettors, then by how close odds are to 50/50
       const volDiff = b.odds.totalPool - a.odds.totalPool;
       if (volDiff !== 0) return volDiff;
       const bettorDiff =
         (b.odds.redBettors + b.odds.blueBettors) -
         (a.odds.redBettors + a.odds.blueBettors);
       if (bettorDiff !== 0) return bettorDiff;
-      // Closer to 50/50 = more interesting
       return Math.abs(a.odds.redPct - 50) - Math.abs(b.odds.redPct - 50);
     });
 
-  // Also find recently completed with biggest pools
   const completedRanked: RankedMatch[] = allMatches
     .filter((m) => m.is_complete)
     .map((match) => {
       const pool = pools[match.match_key] ?? null;
-      const odds = calculateOdds(pool, predictions[match.match_key] ?? null);
+      const odds = calculateOdds(pool, null);
       return { match, odds, pool };
     })
     .sort((a, b) => b.odds.totalPool - a.odds.totalPool)

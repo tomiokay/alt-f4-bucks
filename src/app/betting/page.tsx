@@ -11,7 +11,6 @@ import {
   getUserPoolBets,
   getAllPoolSummaries,
 } from "@/db/bets";
-import { getEventPredictions } from "@/lib/statbotics";
 import type { MatchCache, PoolSummary } from "@/lib/types";
 
 export default async function BettingPage() {
@@ -40,13 +39,8 @@ export default async function BettingPage() {
     pools[key] = val;
   }
 
+  // Skip Statbotics on this page — too slow, use pool odds only
   const predictions: Record<string, { redWinProb: number; blueWinProb: number }> = {};
-  for (const ek of eventKeys) {
-    const preds = await getEventPredictions(ek);
-    for (const [key, val] of preds) {
-      predictions[key] = val;
-    }
-  }
 
   const activeBets = bets.filter((b) => b.payout === null);
   const totalAtRisk = activeBets.reduce((s, b) => s + b.amount, 0);
@@ -54,10 +48,8 @@ export default async function BettingPage() {
   return (
     <div className="space-y-5">
       <AutoSync />
-      {/* Sync */}
       <EventSync />
 
-      {/* Stats bar */}
       <div className="flex items-center gap-6 text-[13px]">
         <div>
           <span className="text-[#484f58]">Portfolio </span>
@@ -81,12 +73,10 @@ export default async function BettingPage() {
         )}
       </div>
 
-      {/* All markets header */}
       <div className="flex items-center justify-between">
         <h2 className="text-[16px] font-semibold text-[#e6edf3]">All markets</h2>
       </div>
 
-      {/* Markets */}
       <MatchBrowser
         matches={allMatches}
         pools={pools}

@@ -9,22 +9,23 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const service = await createServiceClient();
 
-  // Get all event keys we're tracking
-  const trackedKeys = await getActiveEventKeys();
-  if (trackedKeys.length === 0) {
-    return NextResponse.json({ synced: 0, resolved: 0 });
-  }
-
-  // Fetch current events for name lookup
+  // Get current/upcoming events from TBA (next 2 weeks)
   const currentEvents = await getCurrentEvents();
   const eventNameMap = new Map(currentEvents.map((e) => [e.key, e.name]));
 
+  // Merge: all TBA current events + any already-tracked events in our DB
+  const trackedKeys = await getActiveEventKeys();
+  const allKeys = new Set([
+    ...currentEvents.map((e) => e.key),
+    ...trackedKeys,
+  ]);
+
   let totalSynced = 0;
 
-  // Sync each tracked event from TBA
-  for (const eventKey of trackedKeys) {
+  for (const eventKey of allKeys) {
     try {
       const matches = await getEventMatches(eventKey);
+      if (matches.length === 0) continue;
       const eventName = eventNameMap.get(eventKey) ?? eventKey;
       const rows = matches.map((m) => tbaMatchToCache(m, eventName));
 
@@ -34,7 +35,7 @@ export async function GET() {
 
       if (!error) totalSynced += rows.length;
     } catch {
-      // Skip events that fail (e.g., invalid key) — don't block others
+      // Skip events that fail
     }
   }
 
@@ -82,9 +83,14 @@ export async function GET() {
     }
   }
 
+  revalidatePath("/");
   revalidatePath("/betting");
   revalidatePath("/popular");
   revalidatePath("/dashboard");
 
-  return NextResponse.json({ synced: totalSynced, resolved: totalResolved });
+  return NextResponse.json({
+    synced: totalSynced,
+    resolved: totalResolved,
+    events: allKeys.size,
+  });
 }

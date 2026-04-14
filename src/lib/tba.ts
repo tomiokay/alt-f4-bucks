@@ -72,12 +72,12 @@ export async function getCurrentEvents(year?: number): Promise<TBAEvent[]> {
   const events: TBAEvent[] = await res.json();
 
   const now = new Date();
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
   return events.filter((e) => {
     const end = new Date(e.end_date + "T23:59:59");
     const start = new Date(e.start_date);
-    return end >= now && start <= weekFromNow;
+    return end >= now && start <= twoWeeks;
   });
 }
 

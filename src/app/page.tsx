@@ -48,7 +48,14 @@ export default async function HomePage() {
     return { match, odds, pool };
   });
 
-  const upcoming = enriched.filter((e) => !e.match.is_complete);
+  // Sort upcoming by scheduled time (soonest first)
+  const upcoming = enriched
+    .filter((e) => !e.match.is_complete)
+    .sort((a, b) => {
+      const aTime = a.match.scheduled_time ?? "9999";
+      const bTime = b.match.scheduled_time ?? "9999";
+      return aTime.localeCompare(bTime);
+    });
   const completed = enriched.filter((e) => e.match.is_complete);
 
   const featured = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool)[0] ?? null;

@@ -60,7 +60,14 @@ export function potentialPayout(
 
   const payout = Math.floor((amount * newTotalPool) / newSidePool);
   const profit = payout - amount;
-  const multiplier = parseFloat((payout / amount).toFixed(2));
+  let multiplier = parseFloat((payout / amount).toFixed(2));
+
+  // If pool is empty or one-sided, show implied return based on odds
+  if (multiplier <= 1 && odds.totalPool === 0) {
+    // No bets yet — show 2x as the expected fair return
+    multiplier = 2;
+    return { payout: amount * 2, profit: amount, multiplier };
+  }
 
   return { payout, profit, multiplier };
 }

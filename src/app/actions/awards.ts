@@ -36,10 +36,6 @@ export async function awardBucks(formData: FormData) {
     return { error: parsed.error.issues[0].message };
   }
 
-  if (parsed.data.toUserId === profile.id) {
-    return { error: "You cannot award bucks to yourself" };
-  }
-
   const supabase = await createClient();
 
   const { error } = await supabase.from("transactions").insert({

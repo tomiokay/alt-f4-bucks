@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,8 +25,11 @@ export function AwardForm({ members }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   async function handleSubmit(formData: FormData) {
+    if (submitting.current) return;
+    submitting.current = true;
     setError(null);
     setSuccess(false);
     setLoading(true);
@@ -34,12 +37,12 @@ export function AwardForm({ members }: Props) {
     const result = await awardBucks(formData);
 
     setLoading(false);
+    submitting.current = false;
 
     if (result?.error) {
       setError(result.error);
     } else {
       setSuccess(true);
-      // Reset form by clearing the parent form element
       const form = document.getElementById("award-form") as HTMLFormElement;
       form?.reset();
       setTimeout(() => setSuccess(false), 3000);
@@ -56,12 +59,12 @@ export function AwardForm({ members }: Props) {
           <div className="space-y-2">
             <Label htmlFor="toUserId">Member</Label>
             <Select name="toUserId" required>
-              <SelectTrigger>
+              <SelectTrigger className="cursor-pointer">
                 <SelectValue placeholder="Select a member" />
               </SelectTrigger>
               <SelectContent>
                 {members.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
+                  <SelectItem key={m.id} value={m.id} className="cursor-pointer">
                     {m.display_name}
                   </SelectItem>
                 ))}
@@ -87,12 +90,12 @@ export function AwardForm({ members }: Props) {
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select name="category" required>
-              <SelectTrigger>
+              <SelectTrigger className="cursor-pointer">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {TRANSACTION_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
+                  <SelectItem key={cat} value={cat} className="cursor-pointer">
                     {CATEGORY_LABELS[cat]}
                   </SelectItem>
                 ))}
@@ -117,7 +120,7 @@ export function AwardForm({ members }: Props) {
             </p>
           )}
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="w-full cursor-pointer">
             {loading ? "Processing..." : "Submit"}
           </Button>
         </form>

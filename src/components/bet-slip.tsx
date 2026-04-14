@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -26,6 +26,7 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"buy">("buy");
+  const submitting = useRef(false);
 
   if (!match || !side || !odds) return null;
 
@@ -38,6 +39,8 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
   const presets = [1, 5, 10, 20].filter((p) => p <= balance);
 
   async function handleSubmit() {
+    if (submitting.current) return;
+    submitting.current = true;
     setError(null);
     setLoading(true);
 
@@ -48,6 +51,7 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange }: Prop
 
     const res = await placePoolBet(formData);
     setLoading(false);
+    submitting.current = false;
 
     if (res.error) {
       setError(res.error);

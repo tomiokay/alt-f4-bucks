@@ -98,4 +98,19 @@
   body {
     @apply bg-background text-foreground;
   }
+  button,
+  a,
+  [role="button"],
+  select,
+  input[type="submit"],
+  input[type="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  label[for] {
+    cursor: pointer;
+  }
+  button:active:not(:disabled),
+  a:active {
+    transform: scale(0.97);
+  }
 }

@@ -25,7 +25,8 @@ export function AutoSync() {
       }
     }
 
-    // Don't sync on mount — let the page render fast first
+    // Sync on mount to pick up new events, then every 2 min
+    sync();
     const id = setInterval(sync, SYNC_INTERVAL);
     return () => {
       mounted.current = false;

@@ -47,6 +47,10 @@ export function MarketHeader({ match, odds }: Props) {
               <span className="rounded bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">
                 Resolved
               </span>
+            ) : match.scheduled_time && new Date(match.scheduled_time) < new Date() ? (
+              <span className="rounded bg-[#3b1c1c] px-2 py-0.5 text-[10px] font-semibold text-[#f59e0b]">
+                In Progress
+              </span>
             ) : (
               <span className="rounded bg-[#1c2128] px-2 py-0.5 text-[10px] font-semibold text-[#388bfd]">
                 Open

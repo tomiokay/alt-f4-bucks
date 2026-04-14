@@ -20,8 +20,13 @@ export function MatchBrowser({ matches, pools, predictions, balance }: Props) {
   const [slipOpen, setSlipOpen] = useState(false);
   const [tab, setTab] = useState<"upcoming" | "completed">("upcoming");
 
-  const upcoming = matches.filter((m) => !m.is_complete);
-  const completed = matches.filter((m) => m.is_complete);
+  const now = new Date().toISOString();
+  const upcoming = matches.filter((m) =>
+    !m.is_complete && (!m.scheduled_time || m.scheduled_time > now)
+  );
+  const completed = matches.filter((m) =>
+    m.is_complete || (m.scheduled_time && m.scheduled_time < now)
+  );
 
   function openSlip(match: MatchCache, side: "red" | "blue") {
     setSelectedMatch(match);

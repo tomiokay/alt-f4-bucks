@@ -48,15 +48,23 @@ export default async function HomePage() {
     return { match, odds, pool };
   });
 
-  // Sort upcoming by scheduled time (soonest first)
+  // Only show matches that haven't started yet OR have no scheduled time
+  const now = new Date().toISOString();
   const upcoming = enriched
-    .filter((e) => !e.match.is_complete)
+    .filter((e) => {
+      if (e.match.is_complete) return false;
+      // If scheduled in the past, treat as completed/in-progress
+      if (e.match.scheduled_time && e.match.scheduled_time < now) return false;
+      return true;
+    })
     .sort((a, b) => {
       const aTime = a.match.scheduled_time ?? "9999";
       const bTime = b.match.scheduled_time ?? "9999";
       return aTime.localeCompare(bTime);
     });
-  const completed = enriched.filter((e) => e.match.is_complete);
+  const completed = enriched.filter((e) =>
+    e.match.is_complete || (e.match.scheduled_time && e.match.scheduled_time < now)
+  );
 
   const featured = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool)[0] ?? null;
   const trending = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool).slice(0, 12);

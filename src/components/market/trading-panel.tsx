@@ -20,7 +20,8 @@ export function TradingPanel({ match, odds, balance }: Props) {
   const [success, setSuccess] = useState(false);
   const submitting = useRef(false);
 
-  const isBettable = !match.is_complete;
+  const isPast = match.scheduled_time && new Date(match.scheduled_time) < new Date();
+  const isBettable = !match.is_complete && !isPast;
   const canAfford = balance >= amount && amount >= 1;
   const result = potentialPayout(odds, side, amount);
   const pct = side === "red" ? odds.redPct : odds.bluePct;

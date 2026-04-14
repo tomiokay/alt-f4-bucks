@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { MatchBrowser } from "@/components/match-browser";
-import { EventSync } from "@/components/event-sync";
 import { AutoSync } from "@/components/auto-sync";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
@@ -13,9 +12,16 @@ import {
 } from "@/db/bets";
 import type { MatchCache, PoolSummary } from "@/lib/types";
 
-export default async function BettingPage() {
+type Props = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+export default async function BettingPage({ searchParams }: Props) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+
+  const { q } = await searchParams;
+  const query = q?.toLowerCase().trim() ?? "";
 
   const [balance, bets, eventKeys, poolMap] = await Promise.all([
     getUserBalance(profile.id),
@@ -34,12 +40,21 @@ export default async function BettingPage() {
     allMatches = await getUpcomingMatches(50);
   }
 
+  // Filter by search query
+  if (query) {
+    allMatches = allMatches.filter((m) =>
+      m.event_name.toLowerCase().includes(query) ||
+      m.red_teams.some((t) => t.includes(query)) ||
+      m.blue_teams.some((t) => t.includes(query)) ||
+      m.match_key.toLowerCase().includes(query)
+    );
+  }
+
   const pools: Record<string, PoolSummary> = {};
   for (const [key, val] of poolMap) {
     pools[key] = val;
   }
 
-  // Skip Statbotics on this page — too slow, use pool odds only
   const predictions: Record<string, { redWinProb: number; blueWinProb: number }> = {};
 
   const activeBets = bets.filter((b) => b.payout === null);
@@ -48,7 +63,6 @@ export default async function BettingPage() {
   return (
     <div className="space-y-5">
       <AutoSync />
-      <EventSync />
 
       <div className="flex items-center gap-6 text-[13px]">
         <div>
@@ -74,7 +88,9 @@ export default async function BettingPage() {
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-[16px] font-semibold text-[#e6edf3]">All markets</h2>
+        <h2 className="text-[16px] font-semibold text-[#e6edf3]">
+          {query ? `Results for "${q}"` : "All markets"}
+        </h2>
       </div>
 
       <MatchBrowser

@@ -29,6 +29,7 @@ const CATEGORY_LINKS = [
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/dashboard", label: "Portfolio" },
   { href: "/manager", label: "Admin", role: ["manager", "admin"] as string[] },
+  // Store hidden for now
 ];
 
 export function Nav({ profile, balance = 0 }: NavProps) {
@@ -86,14 +87,6 @@ export function Nav({ profile, balance = 0 }: NavProps) {
                   ${balance.toLocaleString()}
                 </span>
               </div>
-
-              {/* Deposit button */}
-              <Link
-                href="/store"
-                className="hidden sm:flex h-8 items-center rounded-lg bg-[#22c55e] px-3 text-[12px] font-semibold text-white hover:bg-[#16a34a] transition-colors"
-              >
-                Store
-              </Link>
 
               {/* Notifications bell */}
               <button className="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[#161b22] transition-colors">

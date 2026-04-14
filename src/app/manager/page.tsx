@@ -17,7 +17,7 @@ export default async function ManagerPage() {
     getAllStoreItems(),
   ]);
 
-  const members = allProfiles.filter((p) => p.id !== profile.id);
+  const members = allProfiles;
 
   return (
     <div className="space-y-6">

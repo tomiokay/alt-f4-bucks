@@ -32,6 +32,7 @@ const CATEGORY_LINKS = [
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/dashboard", label: "Portfolio" },
   { href: "/manager", label: "Admin", role: ["manager", "admin"] as string[] },
+  { href: "/dev", label: "Dev", role: ["manager", "admin"] as string[] },
   // Store hidden for now
 ];
 

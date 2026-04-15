@@ -126,6 +126,59 @@ export async function resolveTestMatch(formData: FormData) {
   return { success: true, resolved: 0 };
 }
 
+export async function createTestEvent(formData: FormData) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const eventName = formData.get("eventName") as string || "Dev Test Regional";
+  const numMatches = parseInt(formData.get("numMatches") as string) || 12;
+  const eventKey = `2026devtest_${Date.now().toString(36)}`;
+
+  // Pool of FRC teams to randomly assign
+  const teamPool = [
+    "254","971","1678","118","2056","1114","148","330","1323","2910",
+    "3310","4414","7558","846","687","696","980","1622","4738","7607",
+    "2659","2073","2637","5012","3863","2404","3749","2543","8768","9706",
+  ];
+
+  const matches = [];
+  for (let i = 1; i <= numMatches; i++) {
+    // Shuffle and pick 6 random teams (3 red, 3 blue)
+    const shuffled = [...teamPool].sort(() => Math.random() - 0.5);
+    const red = shuffled.slice(0, 3);
+    const blue = shuffled.slice(3, 6);
+
+    // Schedule matches spread over the next 2 days
+    const hoursOffset = 24 + (i * 0.5);
+    const scheduledTime = new Date(Date.now() + hoursOffset * 60 * 60 * 1000).toISOString();
+
+    matches.push({
+      match_key: `${eventKey}_qm${i}`,
+      event_key: eventKey,
+      event_name: eventName,
+      comp_level: "qm",
+      match_number: i,
+      red_teams: red,
+      blue_teams: blue,
+      scheduled_time: scheduledTime,
+      actual_time: null,
+      red_score: null,
+      blue_score: null,
+      winning_alliance: null,
+      is_complete: false,
+      fetched_at: new Date().toISOString(),
+    });
+  }
+
+  const { error } = await service.from("match_cache").upsert(matches, { onConflict: "match_key" });
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/betting");
+  revalidatePath("/events");
+  return { success: true, eventKey, matchCount: numMatches };
+}
+
 export async function grantBucks(formData: FormData) {
   await requireAdmin();
   const service = await createServiceClient();

@@ -298,5 +298,104 @@ export async function resolveScoreMarkets(eventKey: string) {
     } catch { /* skip */ }
   }
 
+  // Resolve event_winner markets if all playoff matches are complete
+  const { data: ewMarkets } = await service
+    .from("prediction_markets")
+    .select("*")
+    .eq("event_key", eventKey)
+    .eq("type", "event_winner")
+    .eq("status", "open");
+
+  for (const market of ewMarkets ?? []) {
+    // Check if event has playoff matches and they're all complete
+    const { data: playoffMatches } = await service
+      .from("match_cache")
+      .select("comp_level, is_complete, winning_alliance, red_teams, blue_teams")
+      .eq("event_key", eventKey)
+      .neq("comp_level", "qm");
+
+    if (!playoffMatches || playoffMatches.length === 0) continue;
+    const allDone = playoffMatches.every((m: { is_complete: boolean }) => m.is_complete);
+    if (!allDone) continue;
+
+    // Find the finals winner — last finals match with a winner
+    const finals = playoffMatches
+      .filter((m: { comp_level: string; winning_alliance: string }) => m.comp_level === "f" && m.winning_alliance)
+      .pop();
+
+    if (!finals) continue;
+
+    // Try to determine which alliance number won using TBA alliances
+    try {
+      const { getEventAlliances } = await import("@/lib/tba");
+      const alliances = await getEventAlliances(eventKey);
+      const winningTeams = (finals as { winning_alliance: string; red_teams: string[]; blue_teams: string[] }).winning_alliance === "red"
+        ? (finals as { red_teams: string[] }).red_teams
+        : (finals as { blue_teams: string[] }).blue_teams;
+
+      // Find which alliance contains the winning teams
+      let winningAllianceKey: string | null = null;
+      for (let i = 0; i < alliances.length; i++) {
+        const picks = alliances[i].picks.map((p: string) => p.replace("frc", ""));
+        if (winningTeams.some((t: string) => picks.includes(t))) {
+          winningAllianceKey = `alliance_${i + 1}`;
+          break;
+        }
+      }
+
+      if (winningAllianceKey) {
+        await service.rpc("resolve_prediction_market", {
+          p_market_id: market.id,
+          p_correct_option: winningAllianceKey,
+        });
+        resolved++;
+      }
+    } catch {
+      // TBA call failed, skip
+    }
+  }
+
+  // Resolve ranking_position markets if quals are done
+  const { data: rankMarkets } = await service
+    .from("prediction_markets")
+    .select("*")
+    .eq("event_key", eventKey)
+    .eq("type", "ranking_position")
+    .eq("status", "open");
+
+  if (rankMarkets && rankMarkets.length > 0) {
+    // Check if quals are done (no upcoming qual matches)
+    const { data: qualMatches } = await service
+      .from("match_cache")
+      .select("is_complete")
+      .eq("event_key", eventKey)
+      .eq("comp_level", "qm");
+
+    const allQualsDone = qualMatches && qualMatches.length > 0 && qualMatches.every((m: { is_complete: boolean }) => m.is_complete);
+
+    if (allQualsDone) {
+      try {
+        const { getEventRankings } = await import("@/lib/tba");
+        const rankings = await getEventRankings(eventKey);
+
+        for (const market of rankMarkets) {
+          const targetRank = market.line ? Math.round(market.line) : null;
+          if (!targetRank) continue;
+
+          const teamAtRank = rankings.find((r: { rank: number }) => r.rank === targetRank);
+          if (!teamAtRank) continue;
+
+          await service.rpc("resolve_prediction_market", {
+            p_market_id: market.id,
+            p_correct_option: teamAtRank.team_key,
+          });
+          resolved++;
+        }
+      } catch {
+        // TBA call failed, skip
+      }
+    }
+  }
+
   return resolved;
 }

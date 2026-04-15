@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createTestMatch, resolveTestMatch, grantBucks, resetEverything, updateTeamNumber } from "@/app/actions/dev";
+import { createTestMatch, createTestEvent, resolveTestMatch, grantBucks, resetEverything, updateTeamNumber } from "@/app/actions/dev";
 import type { MatchCache, Profile } from "@/lib/types";
 
 type Props = {
@@ -24,6 +24,7 @@ export function DevPanel({ userId, balance, unresolvedMatches, allProfiles = [] 
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <GrantBucksCard userId={userId} balance={balance} router={router} />
+      <CreateEventCard router={router} />
       <CreateMatchCard router={router} />
       <ResolveMatchCard matches={unresolvedMatches} router={router} />
       <TeamNumberCard profiles={allProfiles} router={router} />
@@ -80,6 +81,75 @@ function GrantBucksCard({ userId, balance, router }: { userId: string; balance: 
         className="w-full rounded-lg bg-[#22c55e] py-2 text-[13px] font-semibold text-white hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
       >
         {loading ? "Granting..." : `Grant $${amount.toLocaleString()}`}
+      </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function CreateEventCard({ router }: { router: ReturnType<typeof useRouter> }) {
+  const [eventName, setEventName] = useState("Dev Test Regional");
+  const [numMatches, setNumMatches] = useState(12);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const ref = useRef(false);
+
+  async function handleCreate() {
+    if (ref.current) return;
+    ref.current = true;
+    setLoading(true);
+    setMsg(null);
+
+    const fd = new FormData();
+    fd.set("eventName", eventName);
+    fd.set("numMatches", String(numMatches));
+    const res = await createTestEvent(fd);
+
+    setLoading(false);
+    ref.current = false;
+
+    if (res.error) {
+      setMsg(`Error: ${res.error}`);
+    } else {
+      setMsg(`Created ${res.matchCount} matches for ${res.eventKey}`);
+      router.refresh();
+    }
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161b22] p-5 space-y-3">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#e6edf3]">Create Test Event</h3>
+        <p className="text-[11px] text-[#484f58]">Creates a full event with random team matchups</p>
+      </div>
+      <input
+        value={eventName}
+        onChange={(e) => setEventName(e.target.value)}
+        placeholder="Event name"
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-3 text-[12px] text-[#e6edf3] focus:border-[#388bfd] focus:outline-none"
+      />
+      <div>
+        <label className="text-[10px] text-[#484f58]">Number of qual matches</label>
+        <div className="flex gap-2 mt-1">
+          {[6, 12, 24, 48].map((n) => (
+            <button
+              key={n}
+              onClick={() => setNumMatches(n)}
+              className={`flex-1 rounded-lg py-2 text-[12px] font-medium transition-colors ${
+                numMatches === n ? "bg-[#21262d] text-[#e6edf3]" : "bg-[#0d1117] text-[#7d8590] hover:text-[#e6edf3]"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+      <button
+        onClick={handleCreate}
+        disabled={loading}
+        className="w-full rounded-lg bg-[#22c55e] py-2 text-[13px] font-semibold text-white hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+      >
+        {loading ? "Creating..." : `Create Event (${numMatches} matches)`}
       </button>
       {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
     </div>

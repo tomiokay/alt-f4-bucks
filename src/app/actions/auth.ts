@@ -3,6 +3,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { containsProfanity } from "@/lib/profanity";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -67,8 +68,20 @@ export async function login(formData: FormData) {
     return { error: error.message };
   }
 
-  // Ensure welcome bonus on every login (idempotent)
   if (data.user) {
+    // Check if banned before allowing in
+    const service = await createServiceClient();
+    const { data: profile } = await service
+      .from("profiles")
+      .select("banned")
+      .eq("id", data.user.id)
+      .single();
+
+    if (profile?.banned) {
+      await supabase.auth.signOut();
+      return { error: "This account has been suspended." };
+    }
+
     await ensureWelcomeBonus(data.user.id);
   }
 
@@ -87,6 +100,10 @@ export async function signup(formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
+  }
+
+  if (containsProfanity(parsed.data.displayName)) {
+    return { error: "Display name contains inappropriate language." };
   }
 
   const { data, error } = await supabase.auth.signUp({

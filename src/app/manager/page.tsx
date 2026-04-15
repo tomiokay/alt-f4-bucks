@@ -6,6 +6,7 @@ import { AuditLog } from "@/components/audit-log";
 import { TeamNumberForm } from "@/components/team-number-form";
 import { getCurrentProfile, getAllProfiles } from "@/db/profiles";
 import { getAllStoreItems } from "@/db/store";
+import { UserManagement } from "@/components/user-management";
 
 export default async function ManagerPage() {
   const profile = await getCurrentProfile();
@@ -32,6 +33,7 @@ export default async function ManagerPage() {
       <Tabs defaultValue="award" className="space-y-4">
         <TabsList className="bg-secondary border-0">
           <TabsTrigger value="award">Award</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="store">Store</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
@@ -41,6 +43,10 @@ export default async function ManagerPage() {
           <div className="max-w-md">
             <AwardForm members={members} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="users">
+          <UserManagement members={members} currentUserId={profile.id} />
         </TabsContent>
 
         <TabsContent value="teams">

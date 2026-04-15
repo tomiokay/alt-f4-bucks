@@ -46,7 +46,31 @@ export default async function RootLayout({
           notifications={notifications}
           unreadCount={unreadCount}
         />
-        <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-6">
+          {profile?.banned ? (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-[#ef4444]/10 flex items-center justify-center">
+                <span className="text-3xl">🚫</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-[#e6edf3]">Account Suspended</h1>
+                <p className="text-[14px] text-[#7d8590] mt-2 max-w-sm">
+                  Your account has been suspended. Contact a team manager if you think this is a mistake.
+                </p>
+              </div>
+              <form action="/api/auth/logout" method="POST">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-[#21262d] text-[#e6edf3] text-[13px] hover:bg-[#30363d] transition-colors"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          ) : (
+            children
+          )}
+        </main>
         <Toaster />
       </body>
     </html>

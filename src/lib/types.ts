@@ -5,6 +5,7 @@ export type Profile = {
   display_name: string;
   role: Role;
   team_number: string | null;
+  banned: boolean;
   created_at: string;
 };
 
@@ -163,6 +164,8 @@ export type PredictionBet = {
   amount: number;
   payout: number | null;
   predicted_value: number | null;
+  predicted_red: number | null;
+  predicted_blue: number | null;
   created_at: string;
 };
 

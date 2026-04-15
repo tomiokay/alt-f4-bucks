@@ -3,6 +3,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { containsProfanity } from "@/lib/profanity";
 
 const updateProfileSchema = z.object({
   displayName: z.string().min(1, "Display name is required").max(50, "Max 50 characters"),
@@ -24,6 +25,10 @@ export async function updateProfile(formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
+  }
+
+  if (containsProfanity(parsed.data.displayName)) {
+    return { error: "Display name contains inappropriate language." };
   }
 
   const { error } = await supabase
@@ -160,4 +165,38 @@ export async function adminBulkSetTeamNumber(formData: FormData) {
   revalidatePath("/manager");
   revalidatePath("/leaderboard");
   return { success: true, count: userIds.length };
+}
+
+// Admin: ban or unban a user
+export async function setBanStatus(userId: string, banned: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["manager", "admin"].includes(profile.role)) {
+    return { error: "Not authorized" };
+  }
+
+  // Prevent banning yourself
+  if (userId === user.id) return { error: "You cannot ban yourself." };
+
+  const service = await createServiceClient();
+  const { error } = await service
+    .from("profiles")
+    .update({ banned })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager");
+  return { success: true };
 }

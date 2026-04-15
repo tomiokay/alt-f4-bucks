@@ -6,14 +6,15 @@ import {
   getAllPoolSummaries,
   getOddsHistory,
 } from "@/db/bets";
+import { getEventPredictionMarkets, getAllPredictionPools } from "@/db/predictions";
 import { calculateOdds } from "@/lib/odds";
-import { FeaturedMarket } from "@/components/home/featured-market";
+import { FeaturedCarousel } from "@/components/home/featured-carousel";
 import { BreakingNews } from "@/components/home/breaking-news";
 import { HotTopics } from "@/components/home/hot-topics";
 import { AllMarkets } from "@/components/home/all-markets";
 import { AutoSync } from "@/components/auto-sync";
 import { HowItWorksButton } from "@/components/how-it-works";
-import type { MatchCache, PoolSummary, MatchOdds } from "@/lib/types";
+import type { MatchCache, PoolSummary, MatchOdds, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
 export const revalidate = 30;
 
@@ -72,6 +73,31 @@ export default async function HomePage() {
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
   const trending = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool).slice(0, 12);
 
+  // Fetch event-level prediction markets (event_winner, ranking_top1)
+  const allPredMarkets: PredictionMarket[] = [];
+  const allPredPools: Record<string, Record<string, PredictionPoolOption>> = {};
+  for (const ek of eventKeys) {
+    try {
+      const markets = await getEventPredictionMarkets(ek);
+      const eventLevelMarkets = markets.filter(
+        (m) => m.status === "open" && (m.type === "event_winner" || m.type === "ranking_top1")
+      );
+      allPredMarkets.push(...eventLevelMarkets);
+
+      // Fetch pools for these markets
+      const poolsMap = await getAllPredictionPools(ek);
+      for (const [mId, optMap] of poolsMap) {
+        const opts: Record<string, PredictionPoolOption> = {};
+        for (const [optKey, optVal] of optMap) {
+          opts[optKey] = optVal;
+        }
+        allPredPools[mId] = opts;
+      }
+    } catch {
+      // Prediction tables may not exist yet
+    }
+  }
+
   const breaking = [...completed]
     .sort((a, b) => {
       const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
@@ -115,15 +141,15 @@ export default async function HomePage() {
       </div>
       <div className="flex gap-6">
         <div className="flex-1 min-w-0 space-y-6">
-          {featured && (
-            <FeaturedMarket
-              featured={featured}
-              pools={pools}
-              predictions={{}}
-              balance={balance}
-              oddsHistory={featuredHistory}
-            />
-          )}
+          <FeaturedCarousel
+            featured={featured}
+            pools={pools}
+            predictions={{}}
+            balance={balance}
+            oddsHistory={featuredHistory}
+            predictionMarkets={allPredMarkets}
+            predictionPools={allPredPools}
+          />
           <AllMarkets
             upcoming={upcoming}
             trending={trending}

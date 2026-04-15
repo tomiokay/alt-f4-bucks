@@ -129,6 +129,47 @@ export type Notification = {
   created_at: string;
 };
 
+// --- Prediction Markets ---
+
+export type PredictionMarketType = "score_over_under" | "event_winner" | "ranking_top1" | "ranking_top8";
+
+export type PredictionMarketOption = {
+  key: string;
+  label: string;
+};
+
+export type PredictionMarket = {
+  id: string;
+  event_key: string;
+  match_key: string | null;
+  type: PredictionMarketType;
+  title: string;
+  description: string | null;
+  options: PredictionMarketOption[];
+  line: number | null;
+  correct_option: string | null;
+  status: "open" | "closed" | "resolved" | "voided";
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type PredictionBet = {
+  id: string;
+  user_id: string;
+  market_id: string;
+  option_key: string;
+  amount: number;
+  payout: number | null;
+  created_at: string;
+};
+
+export type PredictionPoolOption = {
+  market_id: string;
+  option_key: string;
+  pool: number;
+  bettors: number;
+};
+
 export type OddsHistoryPoint = {
   id: string;
   match_key: string;

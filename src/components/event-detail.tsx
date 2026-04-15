@@ -5,7 +5,8 @@ import { MatchCard } from "@/components/match-card";
 import { BetSlip } from "@/components/bet-slip";
 import { calculateOdds } from "@/lib/odds";
 import { cn } from "@/lib/utils";
-import type { MatchCache, PoolSummary } from "@/lib/types";
+import { PredictionMarketCard } from "@/components/prediction-market-card";
+import type { MatchCache, PoolSummary, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 import type { TBARanking, TBAAlliance } from "@/lib/tba";
 
 type Props = {
@@ -17,6 +18,8 @@ type Props = {
   predictions?: Record<string, { redWinProb: number; blueWinProb: number }>;
   rankings?: TBARanking[];
   alliances?: TBAAlliance[];
+  predictionMarkets?: PredictionMarket[];
+  predictionPools?: Record<string, Record<string, PredictionPoolOption>>;
 };
 
 function stripFrc(key: string) {
@@ -454,6 +457,106 @@ function PlayoffsTab({
   );
 }
 
+// ── Predictions Tab ──────────────────────────────────────────
+
+function PredictionsTab({
+  markets,
+  pools,
+  balance,
+}: {
+  markets: PredictionMarket[];
+  pools: Record<string, Record<string, PredictionPoolOption>>;
+  balance: number;
+}) {
+  const [filter, setFilter] = useState<"all" | "score" | "event" | "ranking">("all");
+
+  const filtered = markets.filter((m) => {
+    if (filter === "score") return m.type === "score_over_under";
+    if (filter === "event") return m.type === "event_winner";
+    if (filter === "ranking") return m.type === "ranking_top1" || m.type === "ranking_top8";
+    return true;
+  });
+
+  const openMarkets = filtered.filter((m) => m.status === "open");
+  const resolvedMarkets = filtered.filter((m) => m.status !== "open");
+
+  if (markets.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="text-[14px] text-[#7d8590]">No prediction markets yet</p>
+        <p className="text-[12px] text-[#484f58] mt-1">
+          Markets are created automatically as match data arrives
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filter buttons */}
+      <div className="flex items-center gap-1 rounded-lg bg-[#161b22] p-0.5 w-fit">
+        {(
+          [
+            { key: "all" as const, label: "All" },
+            { key: "score" as const, label: "Score O/U" },
+            { key: "event" as const, label: "Event Winner" },
+            { key: "ranking" as const, label: "Rankings" },
+          ] as const
+        ).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+              filter === f.key ? "bg-[#21262d] text-[#e6edf3]" : "text-[#484f58]"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Open markets */}
+      {openMarkets.length > 0 && (
+        <div>
+          <h3 className="text-[13px] font-semibold text-[#7d8590] uppercase tracking-wide mb-3">
+            Open Markets ({openMarkets.length})
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {openMarkets.map((m) => (
+              <PredictionMarketCard
+                key={m.id}
+                market={m}
+                pools={pools[m.id] ?? {}}
+                balance={balance}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resolved markets */}
+      {resolvedMarkets.length > 0 && (
+        <div>
+          <h3 className="text-[13px] font-semibold text-[#7d8590] uppercase tracking-wide mb-3">
+            Resolved ({resolvedMarkets.length})
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {resolvedMarkets.map((m) => (
+              <PredictionMarketCard
+                key={m.id}
+                market={m}
+                pools={pools[m.id] ?? {}}
+                balance={balance}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main EventDetail ──────────────────────────────────────────
 
 export function EventDetail({
@@ -465,12 +568,10 @@ export function EventDetail({
   predictions = {},
   rankings = [],
   alliances = [],
+  predictionMarkets = [],
+  predictionPools = {},
 }: Props) {
-  const [tab, setTab] = useState<"matches" | "rankings" | "playoffs">("matches");
-
-  const hasRankings = rankings.length > 0;
-  const hasAlliances = alliances.length > 0;
-  const hasPlayoffMatches = matches.some((m) => m.comp_level !== "qm");
+  const [tab, setTab] = useState<"matches" | "predictions" | "rankings" | "playoffs">("matches");
 
   const completedCount = matches.filter((m) => m.is_complete).length;
   const totalCount = matches.length;
@@ -503,10 +604,11 @@ export function EventDetail({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-[#21262d]">
+      <div className="flex items-center gap-1 border-b border-[#21262d] overflow-x-auto">
         {(
           [
             { key: "matches" as const, label: "Matches", count: totalCount },
+            { key: "predictions" as const, label: "Predictions", count: predictionMarkets.filter((m) => m.status === "open").length },
             { key: "rankings" as const, label: "Rankings", count: rankings.length },
             { key: "playoffs" as const, label: "Playoffs", count: alliances.length },
           ] as const
@@ -515,7 +617,7 @@ export function EventDetail({
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "px-4 pb-2.5 text-[13px] font-medium transition-colors border-b-2 flex items-center gap-1.5",
+              "shrink-0 px-4 pb-2.5 text-[13px] font-medium transition-colors border-b-2 flex items-center gap-1.5",
               tab === t.key
                 ? "text-[#e6edf3] border-[#e6edf3]"
                 : "text-[#7d8590] border-transparent hover:text-[#e6edf3]"
@@ -542,6 +644,13 @@ export function EventDetail({
           matches={matches}
           pools={pools}
           predictions={predictions}
+          balance={balance}
+        />
+      )}
+      {tab === "predictions" && (
+        <PredictionsTab
+          markets={predictionMarkets}
+          pools={predictionPools}
           balance={balance}
         />
       )}

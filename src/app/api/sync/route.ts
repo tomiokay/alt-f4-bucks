@@ -128,14 +128,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Resolve prediction markets for completed matches
+  let predResolved = 0;
+  try {
+    const { resolveScoreMarkets } = await import("@/app/actions/predictions");
+    for (const eventKey of allKeys) {
+      predResolved += await resolveScoreMarkets(eventKey);
+    }
+  } catch {
+    // Prediction tables may not exist yet
+  }
+
   revalidatePath("/");
   revalidatePath("/betting");
-  revalidatePath("/popular");
+  revalidatePath("/events");
   revalidatePath("/dashboard");
 
   return NextResponse.json({
     synced: totalSynced,
     resolved: totalResolved,
+    predResolved,
     events: allKeys.size,
   });
 }

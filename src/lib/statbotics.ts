@@ -41,10 +41,17 @@ export async function getMatchPrediction(
   }
 }
 
+export type EventPrediction = {
+  redWinProb: number;
+  blueWinProb: number;
+  redPredScore?: number;
+  bluePredScore?: number;
+};
+
 export async function getEventPredictions(
   eventKey: string
-): Promise<Map<string, { redWinProb: number; blueWinProb: number }>> {
-  const map = new Map<string, { redWinProb: number; blueWinProb: number }>();
+): Promise<Map<string, EventPrediction>> {
+  const map = new Map<string, EventPrediction>();
   try {
     const res = await statFetch(`${STATBOTICS_BASE}/matches?event=${eventKey}`);
     if (!res.ok) return map;
@@ -53,6 +60,8 @@ export async function getEventPredictions(
       map.set(m.match, {
         redWinProb: Math.round(m.pred.red_win_prob * 100),
         blueWinProb: Math.round((1 - m.pred.red_win_prob) * 100),
+        redPredScore: Math.round(m.pred.red_score),
+        bluePredScore: Math.round(m.pred.blue_score),
       });
     }
   } catch (e) {

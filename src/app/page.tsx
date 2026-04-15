@@ -132,7 +132,7 @@ export default async function HomePage() {
           />
         </div>
         <div className="hidden lg:block w-[320px] shrink-0 space-y-5">
-          <BreakingNews items={breaking} />
+          <BreakingNews items={breaking} allCompleted={completed} />
           <HotTopics topics={hotTopics} />
         </div>
       </div>

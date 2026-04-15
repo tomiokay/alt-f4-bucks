@@ -101,9 +101,19 @@ export function tbaMatchToCache(
   winning_alliance: string | null;
   is_complete: boolean;
   fetched_at: string;
+  red_auto_points: number | null;
+  blue_auto_points: number | null;
+  red_rp: number | null;
+  blue_rp: number | null;
 } {
   const hasScore =
     match.alliances.red.score >= 0 && match.alliances.blue.score >= 0;
+
+  const sb = match.score_breakdown as Record<string, Record<string, number>> | null;
+  const redAuto = sb?.red?.totalAutoPoints ?? null;
+  const blueAuto = sb?.blue?.totalAutoPoints ?? null;
+  const redRp = sb?.red?.rp ?? null;
+  const blueRp = sb?.blue?.rp ?? null;
 
   return {
     match_key: match.key,
@@ -124,5 +134,9 @@ export function tbaMatchToCache(
     winning_alliance: match.winning_alliance || null,
     is_complete: hasScore || (match.actual_time !== null),
     fetched_at: new Date().toISOString(),
+    red_auto_points: redAuto,
+    blue_auto_points: blueAuto,
+    red_rp: redRp,
+    blue_rp: blueRp,
   };
 }

@@ -86,6 +86,10 @@ export type MatchCache = {
   winning_alliance: string | null;
   is_complete: boolean;
   fetched_at: string;
+  red_auto_points: number | null;
+  blue_auto_points: number | null;
+  red_rp: number | null;
+  blue_rp: number | null;
 };
 
 export type PoolSummary = {

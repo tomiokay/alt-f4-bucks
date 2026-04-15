@@ -5,13 +5,14 @@ import { BetSlip } from "@/components/bet-slip";
 import { calculateOdds } from "@/lib/odds";
 import { FeaturedChart } from "./featured-chart";
 import type { EnrichedMatch } from "@/app/page";
-import type { PoolSummary } from "@/lib/types";
+import type { PoolSummary, OddsHistoryPoint } from "@/lib/types";
 
 type Props = {
   featured: EnrichedMatch;
   pools: Record<string, PoolSummary>;
   predictions: Record<string, { redWinProb: number; blueWinProb: number }>;
   balance: number;
+  oddsHistory?: OddsHistoryPoint[];
 };
 
 const COMP_LABELS: Record<string, string> = {
@@ -20,7 +21,7 @@ const COMP_LABELS: Record<string, string> = {
   f: "Final",
 };
 
-export function FeaturedMarket({ featured, pools, predictions, balance }: Props) {
+export function FeaturedMarket({ featured, pools, predictions, balance, oddsHistory = [] }: Props) {
   const [slipOpen, setSlipOpen] = useState(false);
   const [slipSide, setSlipSide] = useState<"red" | "blue">("red");
 
@@ -56,7 +57,7 @@ export function FeaturedMarket({ featured, pools, predictions, balance }: Props)
 
         {/* Chart area */}
         <div className="px-5 pb-2">
-          <FeaturedChart redPct={odds.redPct} bluePct={odds.bluePct} />
+          <FeaturedChart redPct={odds.redPct} bluePct={odds.bluePct} history={oddsHistory} />
         </div>
 
         {/* Alliance rows */}

@@ -10,40 +10,36 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import type { OddsHistoryPoint } from "@/lib/types";
 
 type Props = {
   redPct: number;
   bluePct: number;
+  history?: OddsHistoryPoint[];
 };
 
-// Generate smooth probability data trending toward current odds
-function generateTrend(redPct: number, bluePct: number) {
-  const points = 24;
-  const data = [];
+export function FeaturedChart({ redPct, bluePct, history = [] }: Props) {
+  const data = useMemo(() => {
+    if (history.length > 0) {
+      const points = history.map((h) => ({
+        time: new Date(h.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+        red: h.red_pct,
+        blue: h.blue_pct,
+      }));
+      // Add current as last point
+      points.push({ time: "Now", red: redPct, blue: bluePct });
+      return points;
+    }
+    return [
+      { time: "Start", red: 50, blue: 50 },
+      { time: "Now", red: redPct, blue: bluePct },
+    ];
+  }, [history, redPct, bluePct]);
 
-  for (let i = 0; i < points; i++) {
-    const progress = i / (points - 1);
-    let red = 50 + (redPct - 50) * progress + (Math.random() - 0.5) * 8;
-    red = Math.max(10, Math.min(90, red));
-
-    data.push({
-      time: `${i}h`,
-      red: Math.round(red),
-      blue: Math.round(100 - red),
-    });
-  }
-
-  data[data.length - 1].red = redPct;
-  data[data.length - 1].blue = bluePct;
-  return data;
-}
-
-export function FeaturedChart({ redPct, bluePct }: Props) {
-  const data = useMemo(() => generateTrend(redPct, bluePct), [redPct, bluePct]);
+  const hasHistory = history.length > 0;
 
   return (
     <div>
-      {/* Current odds display */}
       <div className="flex items-center justify-center gap-8 mb-3">
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-[#ef4444]" />
@@ -58,16 +54,15 @@ export function FeaturedChart({ redPct, bluePct }: Props) {
         </div>
       </div>
 
-      {/* Area chart */}
       <div className="h-[120px] -mx-2">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
-              <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="featRedGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#ef4444" stopOpacity={0.25} />
                 <stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} />
               </linearGradient>
-              <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="featBlueGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} />
                 <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
               </linearGradient>
@@ -75,23 +70,29 @@ export function FeaturedChart({ redPct, bluePct }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#21262d" vertical={false} />
             <XAxis hide />
             <YAxis hide domain={[0, 100]} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1c2128",
-                border: "1px solid #30363d",
-                borderRadius: "8px",
-                fontSize: "11px",
-              }}
-              formatter={(value, name) => [
-                `${value}%`,
-                name === "red" ? "Red" : "Blue",
-              ]}
-            />
-            <Area type="monotone" dataKey="red" stroke="#ef4444" strokeWidth={2} fill="url(#redGrad)" />
-            <Area type="monotone" dataKey="blue" stroke="#3b82f6" strokeWidth={2} fill="url(#blueGrad)" />
+            {hasHistory && (
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1c2128",
+                  border: "1px solid #30363d",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                }}
+                formatter={(value, name) => [
+                  `${value}%`,
+                  name === "red" ? "Red" : "Blue",
+                ]}
+              />
+            )}
+            <Area type="monotone" dataKey="red" stroke="#ef4444" strokeWidth={2} fill="url(#featRedGrad)" />
+            <Area type="monotone" dataKey="blue" stroke="#3b82f6" strokeWidth={2} fill="url(#featBlueGrad)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
+      {!hasHistory && (
+        <p className="text-[10px] text-[#484f58] text-center mt-1">Chart updates after the first trade</p>
+      )}
     </div>
   );
 }

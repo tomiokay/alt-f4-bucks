@@ -98,45 +98,46 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
 
   return (
     <div className="space-y-6">
-      {/* Profile header row */}
-      <div className="flex items-start gap-6">
-        {/* Left: Avatar + info */}
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white text-xl font-bold">
-            {initials}
+      {/* Profile header — two cards side by side like Polymarket */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-4">
+        {/* Left card: Profile info + stats */}
+        <div className="rounded-xl bg-[#161b22] border border-[#21262d] p-5">
+          <div className="flex items-center gap-4 mb-5">
+            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-orange-300 via-pink-300 to-teal-300 flex items-center justify-center text-white text-lg font-bold shrink-0">
+              {initials}
+            </div>
+            <div>
+              <h1 className="text-[20px] font-semibold text-[#e6edf3]">{profile.display_name}</h1>
+              <p className="text-[12px] text-[#484f58]">
+                Joined {new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[20px] font-semibold text-[#e6edf3]">{profile.display_name}</h1>
-            <p className="text-[12px] text-[#484f58]">
-              Joined {new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-            </p>
+          {/* Stats row inside the card */}
+          <div className="flex items-center gap-0 border-t border-[#21262d] pt-4">
+            <div className="flex-1">
+              <div className="text-[16px] font-bold text-[#e6edf3] tabular-nums font-mono">
+                ${balance.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-[#484f58]">Positions Value</div>
+            </div>
+            <div className="flex-1 border-l border-[#21262d] pl-4">
+              <div className="text-[16px] font-bold text-[#e6edf3] tabular-nums font-mono">
+                ${biggestWin > 0 ? biggestWin.toLocaleString() : "0"}
+              </div>
+              <div className="text-[11px] text-[#484f58]">Biggest Win</div>
+            </div>
+            <div className="flex-1 border-l border-[#21262d] pl-4">
+              <div className="text-[16px] font-bold text-[#e6edf3] tabular-nums font-mono">
+                {totalBets}
+              </div>
+              <div className="text-[11px] text-[#484f58]">Predictions</div>
+            </div>
           </div>
         </div>
 
-        {/* Right: P&L chart card */}
+        {/* Right card: P&L chart */}
         <PnLChart bets={bets} totalPnL={totalPnL} />
-      </div>
-
-      {/* Stats row */}
-      <div className="flex items-center gap-8">
-        <div>
-          <div className="text-[18px] font-bold text-[#e6edf3] tabular-nums font-mono">
-            ${balance.toLocaleString()}
-          </div>
-          <div className="text-[11px] text-[#484f58]">Portfolio Value</div>
-        </div>
-        <div>
-          <div className="text-[18px] font-bold text-[#e6edf3] tabular-nums font-mono">
-            {biggestWin > 0 ? `$${biggestWin.toLocaleString()}` : "$0"}
-          </div>
-          <div className="text-[11px] text-[#484f58]">Biggest Win</div>
-        </div>
-        <div>
-          <div className="text-[18px] font-bold text-[#e6edf3] tabular-nums font-mono">
-            {totalBets}
-          </div>
-          <div className="text-[11px] text-[#484f58]">Predictions</div>
-        </div>
       </div>
 
       {/* Tabs: Positions / Activity */}
@@ -378,8 +379,8 @@ function PnLChart({ bets, totalPnL }: { bets: PoolBetWithProfile[]; totalPnL: nu
   const periodLabel = timeTab === "1D" ? "Past Day" : timeTab === "1W" ? "Past Week" : timeTab === "1M" ? "Past Month" : "All Time";
 
   return (
-    <div className="ml-auto hidden md:block">
-      <div className="rounded-xl bg-[#161b22] border border-[#21262d] px-5 py-4 w-[340px]">
+    <div className="rounded-xl bg-[#161b22] border border-[#21262d] px-5 py-4">
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">

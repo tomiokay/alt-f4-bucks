@@ -4,6 +4,7 @@ import {
   getActiveEventKeys,
   getCachedMatches,
   getAllPoolSummaries,
+  getOddsHistory,
 } from "@/db/bets";
 import { calculateOdds } from "@/lib/odds";
 import { FeaturedMarket } from "@/components/home/featured-market";
@@ -68,6 +69,7 @@ export default async function HomePage() {
   );
 
   const featured = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool)[0] ?? null;
+  const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
   const trending = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool).slice(0, 12);
 
   const breaking = [...completed]
@@ -119,6 +121,7 @@ export default async function HomePage() {
               pools={pools}
               predictions={{}}
               balance={balance}
+              oddsHistory={featuredHistory}
             />
           )}
           <AllMarkets

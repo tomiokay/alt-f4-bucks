@@ -114,7 +114,12 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                       )}>
                         {initials}
                       </div>
-                      <span className="text-[14px] text-[#e6edf3] truncate">{entry.display_name}</span>
+                      <span className="text-[14px] text-[#e6edf3] truncate">
+                        {entry.display_name}
+                        {entry.team_number && (
+                          <span className="text-[11px] text-[#484f58] ml-1.5">#{entry.team_number}</span>
+                        )}
+                      </span>
                     </div>
 
                     <span className={cn(

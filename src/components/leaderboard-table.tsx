@@ -46,7 +46,12 @@ export function LeaderboardTable({ entries }: Props) {
                 <span className="pl-2 text-muted-foreground">{index + 1}</span>
               )}
             </TableCell>
-            <TableCell>{entry.display_name}</TableCell>
+            <TableCell>
+              {entry.display_name}
+              {entry.team_number && (
+                <span className="text-muted-foreground text-xs ml-1">#{entry.team_number}</span>
+              )}
+            </TableCell>
             <TableCell className="text-right font-mono tabular-nums">
               {entry.balance.toLocaleString()}
             </TableCell>

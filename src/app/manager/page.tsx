@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AwardForm } from "@/components/award-form";
 import { StoreManagement } from "@/components/store-management";
 import { AuditLog } from "@/components/audit-log";
+import { TeamNumberForm } from "@/components/team-number-form";
 import { getCurrentProfile, getAllProfiles } from "@/db/profiles";
 import { getAllStoreItems } from "@/db/store";
 
@@ -31,6 +32,7 @@ export default async function ManagerPage() {
       <Tabs defaultValue="award" className="space-y-4">
         <TabsList className="bg-secondary border-0">
           <TabsTrigger value="award">Award</TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="store">Store</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
         </TabsList>
@@ -38,6 +40,12 @@ export default async function ManagerPage() {
         <TabsContent value="award">
           <div className="max-w-md">
             <AwardForm members={members} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="teams">
+          <div className="max-w-md">
+            <TeamNumberForm members={members} />
           </div>
         </TabsContent>
 

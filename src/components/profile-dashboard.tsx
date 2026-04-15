@@ -107,7 +107,12 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
               {initials}
             </div>
             <div>
-              <h1 className="text-[20px] font-semibold text-[#e6edf3]">{profile.display_name}</h1>
+              <h1 className="text-[20px] font-semibold text-[#e6edf3]">
+                {profile.display_name}
+                {profile.team_number && (
+                  <span className="text-[14px] text-[#484f58] font-normal ml-2">#{profile.team_number}</span>
+                )}
+              </h1>
               <p className="text-[12px] text-[#484f58]">
                 Joined {new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
               </p>

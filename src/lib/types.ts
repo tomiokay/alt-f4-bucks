@@ -51,6 +51,7 @@ export type Purchase = {
 export type LeaderboardEntry = {
   user_id: string;
   display_name: string;
+  team_number: string | null;
   balance: number;
 };
 

@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Trophy, BarChart3, Menu, ChevronDown, Search, HelpCircle } from "lucide-react";
+import { LogOut, Trophy, BarChart3, Menu, ChevronDown, Search, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { useState } from "react";
@@ -110,8 +110,11 @@ export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-[13px] text-[#e6edf3] max-w-[100px] truncate hidden sm:block">
+                    <span className="text-[13px] text-[#e6edf3] max-w-[140px] truncate hidden sm:block">
                       {profile.display_name}
+                      {profile.team_number && (
+                        <span className="text-[#484f58] ml-1">#{profile.team_number}</span>
+                      )}
                     </span>
                     <ChevronDown className="h-3 w-3 text-[#7d8590]" />
                   </button>
@@ -152,6 +155,15 @@ export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 
                     >
                       <Trophy className="mr-2 h-4 w-4 text-[#7d8590]" />
                       Leaderboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/settings"
+                      className="cursor-pointer text-[#e6edf3] focus:bg-[#1c2128] focus:text-[#e6edf3]"
+                    >
+                      <Settings className="mr-2 h-4 w-4 text-[#7d8590]" />
+                      Settings
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-[#30363d]" />

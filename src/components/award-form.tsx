@@ -66,6 +66,7 @@ export function AwardForm({ members }: Props) {
                 {members.map((m) => (
                   <SelectItem key={m.id} value={m.id} className="cursor-pointer">
                     {m.display_name}
+                    {m.team_number && <span className="text-muted-foreground ml-1">#{m.team_number}</span>}
                   </SelectItem>
                 ))}
               </SelectContent>

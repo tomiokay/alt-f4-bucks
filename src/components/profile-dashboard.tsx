@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  Tooltip,
+  YAxis,
+} from "recharts";
 import type { Profile, PoolBetWithProfile } from "@/lib/types";
 
 type Props = {
@@ -107,33 +114,7 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
         </div>
 
         {/* Right: P&L chart card */}
-        <div className="ml-auto hidden md:block">
-          <div className="rounded-xl bg-[#161b22] border border-[#21262d] px-5 py-4 min-w-[280px]">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-[#484f58]">Profit/Loss</span>
-              </div>
-              {/* Time tabs */}
-              <div className="flex gap-1">
-                {["1D", "1W", "1M", "ALL"].map((t) => (
-                  <span key={t} className={cn(
-                    "px-1.5 py-0.5 rounded text-[9px] font-medium",
-                    t === "ALL" ? "bg-[#21262d] text-[#e6edf3]" : "text-[#484f58]"
-                  )}>
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className={cn(
-              "text-[24px] font-bold tabular-nums font-mono",
-              totalPnL > 0 ? "text-[#22c55e]" : totalPnL < 0 ? "text-[#ef4444]" : "text-[#e6edf3]"
-            )}>
-              {totalPnL >= 0 ? "+" : ""}${Math.abs(totalPnL).toLocaleString()}.00
-            </div>
-            <p className="text-[10px] text-[#484f58] mt-0.5">All Time</p>
-          </div>
-        </div>
+        <PnLChart bets={bets} totalPnL={totalPnL} />
       </div>
 
       {/* Stats row */}
@@ -360,6 +341,114 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function PnLChart({ bets, totalPnL }: { bets: PoolBetWithProfile[]; totalPnL: number }) {
+  const [timeTab, setTimeTab] = useState("ALL");
+
+  const chartData = useMemo(() => {
+    // Build cumulative P&L from settled bets sorted by time
+    const settled = bets
+      .filter((b) => b.payout !== null)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+    if (settled.length === 0) return [];
+
+    let cumulative = 0;
+    const points = [{ time: "Start", value: 0 }];
+
+    for (const bet of settled) {
+      cumulative += (bet.payout! - bet.amount);
+      points.push({
+        time: new Date(bet.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        value: cumulative,
+      });
+    }
+
+    return points;
+  }, [bets]);
+
+  const isPositive = totalPnL >= 0;
+  const color = isPositive ? "#22c55e" : "#ef4444";
+  const gradientId = isPositive ? "pnlGreen" : "pnlRed";
+
+  const timeTabs = ["1D", "1W", "1M", "ALL"];
+  const periodLabel = timeTab === "1D" ? "Past Day" : timeTab === "1W" ? "Past Week" : timeTab === "1M" ? "Past Month" : "All Time";
+
+  return (
+    <div className="ml-auto hidden md:block">
+      <div className="rounded-xl bg-[#161b22] border border-[#21262d] px-5 py-4 w-[340px]">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-sm ${isPositive ? "bg-[#22c55e]" : "bg-[#ef4444]"}`} />
+            <span className="text-[12px] text-[#7d8590]">Profit/Loss</span>
+          </div>
+          <div className="flex gap-1">
+            {timeTabs.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTimeTab(t)}
+                className={cn(
+                  "px-2 py-0.5 rounded text-[10px] font-medium transition-colors",
+                  timeTab === t ? "bg-[#21262d] text-[#e6edf3]" : "text-[#484f58] hover:text-[#7d8590]"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div className={cn(
+          "text-[26px] font-bold tabular-nums font-mono",
+          isPositive ? "text-[#e6edf3]" : "text-[#e6edf3]"
+        )}>
+          {totalPnL < 0 ? "-" : ""}${Math.abs(totalPnL).toLocaleString()}.00
+        </div>
+        <p className="text-[10px] text-[#484f58] mt-0.5">{periodLabel}</p>
+
+        {/* Chart */}
+        <div className="h-[80px] mt-3 -mx-2">
+          {chartData.length > 1 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <YAxis hide domain={["dataMin", "dataMax"]} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1c2128",
+                    border: "1px solid #30363d",
+                    borderRadius: "8px",
+                    fontSize: "11px",
+                  }}
+                  labelStyle={{ color: "#7d8590" }}
+                  formatter={(value) => [`$${Number(value).toLocaleString()}`, "P&L"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={color}
+                  strokeWidth={2}
+                  fill={`url(#${gradientId})`}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-[11px] text-[#484f58]">
+              Chart appears after first resolved bet
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

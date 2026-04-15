@@ -52,6 +52,78 @@ export async function placePredictionBet(formData: FormData) {
   return { success: true, betId: data };
 }
 
+// Place a score prediction bet (user predicts exact total score)
+const scorePredictionSchema = z.object({
+  marketId: z.string().uuid("Invalid market"),
+  predictedScore: z.coerce.number().int().min(0, "Score must be positive"),
+  amount: z.coerce.number().int().min(1, "Bet at least 1 Buck"),
+});
+
+export async function placeScorePrediction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const parsed = scorePredictionSchema.safeParse({
+    marketId: formData.get("marketId"),
+    predictedScore: formData.get("predictedScore"),
+    amount: formData.get("amount"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const { data, error } = await supabase.rpc("place_score_prediction", {
+    p_user_id: user.id,
+    p_market_id: parsed.data.marketId,
+    p_predicted_score: parsed.data.predictedScore,
+    p_amount: parsed.data.amount,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Insufficient balance")) {
+      return { error: "You don't have enough Alt-F4 Bucks." };
+    }
+    if (msg.includes("closed")) {
+      return { error: "This market is closed." };
+    }
+    return { error: msg };
+  }
+
+  revalidatePath("/events");
+  revalidatePath("/betting");
+  revalidatePath("/dashboard");
+  return { success: true, betId: data };
+}
+
+// Helper: check if market already exists (handles NULL match_key)
+async function marketExists(
+  service: Awaited<ReturnType<typeof createServiceClient>>,
+  eventKey: string,
+  matchKey: string | null,
+  type: string
+): Promise<boolean> {
+  let query = service
+    .from("prediction_markets")
+    .select("id")
+    .eq("event_key", eventKey)
+    .eq("type", type);
+
+  if (matchKey) {
+    query = query.eq("match_key", matchKey);
+  } else {
+    query = query.is("match_key", null);
+  }
+
+  const { data } = await query.limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
 // Auto-create prediction markets for an event
 export async function ensureEventMarkets(
   eventKey: string,
@@ -70,69 +142,39 @@ export async function ensureEventMarkets(
 ) {
   const service = await createServiceClient();
 
-  // 1. Score over/under markets for upcoming qual matches
-  const qualMatches = matches.filter((m) => m.comp_level === "qm" && !m.is_complete);
-  for (const match of qualMatches) {
+  // 1. Score prediction markets for upcoming matches (accuracy-based)
+  const upcomingMatches = matches.filter((m) => !m.is_complete);
+  for (const match of upcomingMatches) {
     const pred = predictions[match.match_key];
-    if (!pred?.redPredScore || !pred?.bluePredScore) continue;
+    const predTotal = pred?.redPredScore && pred?.bluePredScore
+      ? pred.redPredScore + pred.bluePredScore
+      : null;
 
-    const totalPredScore = pred.redPredScore + pred.bluePredScore;
-    const line = Math.round(totalPredScore);
+    if (await marketExists(service, eventKey, match.match_key, "score_prediction")) continue;
 
-    await service.from("prediction_markets").upsert(
-      {
-        event_key: eventKey,
-        match_key: match.match_key,
-        type: "score_over_under",
-        title: `${match.match_key.split("_").pop()}: Total Score O/U ${line}`,
-        description: `Will the combined score be over or under ${line}?`,
-        options: [
-          { key: "over", label: `Over ${line}` },
-          { key: "under", label: `Under ${line}` },
-        ],
-        line,
-        status: "open",
-      },
-      { onConflict: "event_key,match_key,type" }
-    );
+    await service.from("prediction_markets").insert({
+      event_key: eventKey,
+      match_key: match.match_key,
+      type: "score_prediction",
+      title: `Predict the Score`,
+      description: predTotal
+        ? `Statbotics predicts ~${Math.round(predTotal)} total. Closer to actual = bigger payout.`
+        : `Predict the combined score. Closer to actual = bigger payout.`,
+      options: [{ key: "score", label: "Predict total score" }],
+      line: predTotal ? Math.round(predTotal) : null,
+      status: "open",
+    });
   }
 
-  // Also create score O/U for playoff matches
-  const playoffMatches = matches.filter((m) => m.comp_level !== "qm" && !m.is_complete);
-  for (const match of playoffMatches) {
-    const pred = predictions[match.match_key];
-    if (!pred?.redPredScore || !pred?.bluePredScore) continue;
-
-    const totalPredScore = pred.redPredScore + pred.bluePredScore;
-    const line = Math.round(totalPredScore);
-
-    await service.from("prediction_markets").upsert(
-      {
-        event_key: eventKey,
-        match_key: match.match_key,
-        type: "score_over_under",
-        title: `${match.match_key.split("_").pop()}: Total Score O/U ${line}`,
-        description: `Will the combined score be over or under ${line}?`,
-        options: [
-          { key: "over", label: `Over ${line}` },
-          { key: "under", label: `Under ${line}` },
-        ],
-        line,
-        status: "open",
-      },
-      { onConflict: "event_key,match_key,type" }
-    );
-  }
-
-  // 2. Event winner market (if alliances exist)
+  // 2. Event winner market (if alliances exist) — ONE per event
   if (alliances.length > 0) {
-    const options = alliances.map((a, i) => ({
-      key: `alliance_${i + 1}`,
-      label: `${a.name || `Alliance ${i + 1}`} (${a.picks.map((p) => p.replace("frc", "")).join(", ")})`,
-    }));
+    if (!(await marketExists(service, eventKey, null, "event_winner"))) {
+      const options = alliances.map((a, i) => ({
+        key: `alliance_${i + 1}`,
+        label: `${a.name || `Alliance ${i + 1}`} (${a.picks.map((p) => p.replace("frc", "")).join(", ")})`,
+      }));
 
-    await service.from("prediction_markets").upsert(
-      {
+      await service.from("prediction_markets").insert({
         event_key: eventKey,
         match_key: null,
         type: "event_winner",
@@ -140,53 +182,94 @@ export async function ensureEventMarkets(
         description: "Which alliance wins the event?",
         options,
         status: "open",
-      },
-      { onConflict: "event_key,match_key,type" }
-    );
+      });
+    }
   }
 
-  // 3. Ranking #1 market (if rankings exist and event is still going)
+  // 3. Per-rank prediction markets (Ranks 1-8)
+  const qualMatches = matches.filter((m) => m.comp_level === "qm" && !m.is_complete);
   if (rankings.length > 0 && qualMatches.length > 0) {
-    const topTeams = rankings.slice(0, 20);
-    const options = topTeams.map((r) => ({
+    const allTeams = rankings.map((r) => ({
       key: r.team_key,
-      label: `Team ${r.team_key.replace("frc", "")} (currently #${r.rank})`,
+      label: `Team ${r.team_key.replace("frc", "")}`,
     }));
 
-    await service.from("prediction_markets").upsert(
-      {
+    for (let rank = 1; rank <= 8; rank++) {
+      // Use ranking_position type with rank stored in `line`
+      const exists = await service
+        .from("prediction_markets")
+        .select("id")
+        .eq("event_key", eventKey)
+        .is("match_key", null)
+        .eq("type", "ranking_position")
+        .eq("line", rank)
+        .limit(1);
+
+      if ((exists.data?.length ?? 0) > 0) continue;
+
+      await service.from("prediction_markets").insert({
         event_key: eventKey,
         match_key: null,
-        type: "ranking_top1",
-        title: "Qualification Champion",
-        description: "Which team finishes #1 in qualification rankings?",
-        options,
+        type: "ranking_position",
+        title: `Who Finishes Rank #${rank}?`,
+        description: `Predict which team finishes #${rank} in qualification rankings`,
+        options: allTeams,
+        line: rank,
         status: "open",
-      },
-      { onConflict: "event_key,match_key,type" }
-    );
+      });
+    }
   }
 }
 
-// Resolve score over/under markets for completed matches
+// Resolve score prediction markets for completed matches
 export async function resolveScoreMarkets(eventKey: string) {
   const service = await createServiceClient();
 
-  const { data: markets } = await service
+  // Resolve score_prediction markets (accuracy-based)
+  const { data: scoreMarkets } = await service
+    .from("prediction_markets")
+    .select("*")
+    .eq("event_key", eventKey)
+    .eq("type", "score_prediction")
+    .eq("status", "open");
+
+  let resolved = 0;
+
+  for (const market of scoreMarkets ?? []) {
+    if (!market.match_key) continue;
+
+    const { data: match } = await service
+      .from("match_cache")
+      .select("red_score, blue_score, is_complete")
+      .eq("match_key", market.match_key)
+      .single();
+
+    if (!match?.is_complete || match.red_score === null || match.blue_score === null) continue;
+
+    const totalScore = match.red_score + match.blue_score;
+
+    try {
+      const { data: count } = await service.rpc("resolve_score_prediction", {
+        p_market_id: market.id,
+        p_actual_score: totalScore,
+      });
+      resolved += (count as number) ?? 0;
+    } catch {
+      // RPC may not exist yet if migration hasn't run
+    }
+  }
+
+  // Also resolve old score_over_under markets
+  const { data: ouMarkets } = await service
     .from("prediction_markets")
     .select("*")
     .eq("event_key", eventKey)
     .eq("type", "score_over_under")
     .eq("status", "open");
 
-  if (!markets || markets.length === 0) return 0;
-
-  let resolved = 0;
-
-  for (const market of markets) {
+  for (const market of ouMarkets ?? []) {
     if (!market.match_key || !market.line) continue;
 
-    // Check if match is complete
     const { data: match } = await service
       .from("match_cache")
       .select("red_score, blue_score, is_complete")
@@ -198,41 +281,21 @@ export async function resolveScoreMarkets(eventKey: string) {
     const totalScore = match.red_score + match.blue_score;
     const correctOption = totalScore > market.line ? "over" : "under";
 
-    // If exactly on the line, void the market (refund)
     if (totalScore === market.line) {
-      // Refund all bets
-      const { data: bets } = await service
-        .from("prediction_bets")
-        .select("*")
-        .eq("market_id", market.id)
-        .is("payout", null);
-
-      for (const bet of bets ?? []) {
-        await service.from("prediction_bets").update({ payout: bet.amount }).eq("id", bet.id);
-        await service.from("transactions").insert({
-          type: "adjustment",
-          amount: bet.amount,
-          to_user_id: bet.user_id,
-          by_user_id: bet.user_id,
-          reason: `Prediction refund (push) — ${market.title}`,
-          category: "prediction_refund",
-          meta: { prediction_bet_id: bet.id, market_id: market.id },
-        });
-      }
-      await service
-        .from("prediction_markets")
+      await service.from("prediction_markets")
         .update({ status: "voided", resolved_at: new Date().toISOString() })
         .eq("id", market.id);
       resolved++;
       continue;
     }
 
-    const { data: count } = await service.rpc("resolve_prediction_market", {
-      p_market_id: market.id,
-      p_correct_option: correctOption,
-    });
-
-    resolved += (count as number) ?? 0;
+    try {
+      const { data: count } = await service.rpc("resolve_prediction_market", {
+        p_market_id: market.id,
+        p_correct_option: correctOption,
+      });
+      resolved += (count as number) ?? 0;
+    } catch { /* skip */ }
   }
 
   return resolved;

@@ -471,9 +471,9 @@ function PredictionsTab({
   const [filter, setFilter] = useState<"all" | "score" | "event" | "ranking">("all");
 
   const filtered = markets.filter((m) => {
-    if (filter === "score") return m.type === "score_over_under";
+    if (filter === "score") return m.type === "score_over_under" || m.type === "score_prediction";
     if (filter === "event") return m.type === "event_winner";
-    if (filter === "ranking") return m.type === "ranking_top1" || m.type === "ranking_top8";
+    if (filter === "ranking") return m.type === "ranking_top1" || m.type === "ranking_top8" || m.type === "ranking_position";
     return true;
   });
 

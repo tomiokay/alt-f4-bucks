@@ -62,9 +62,11 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
   // Pick icon/color by market type
   const typeConfig = {
     score_over_under: { icon: "O/U", color: "from-orange-500 to-yellow-500" },
+    score_prediction: { icon: "S", color: "from-orange-500 to-yellow-500" },
     event_winner: { icon: "W", color: "from-yellow-500 to-amber-500" },
     ranking_top1: { icon: "#1", color: "from-blue-500 to-cyan-500" },
     ranking_top8: { icon: "T8", color: "from-green-500 to-emerald-500" },
+    ranking_position: { icon: `#${market.line ? Math.round(market.line) : "?"}`, color: "from-purple-500 to-pink-500" },
   }[market.type] ?? { icon: "?", color: "from-gray-500 to-gray-600" };
 
   return (

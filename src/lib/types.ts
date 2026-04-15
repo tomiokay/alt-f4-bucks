@@ -132,7 +132,7 @@ export type Notification = {
 
 // --- Prediction Markets ---
 
-export type PredictionMarketType = "score_over_under" | "event_winner" | "ranking_top1" | "ranking_top8";
+export type PredictionMarketType = "score_over_under" | "score_prediction" | "event_winner" | "ranking_top1" | "ranking_top8" | "ranking_position";
 
 export type PredictionMarketOption = {
   key: string;
@@ -149,6 +149,7 @@ export type PredictionMarket = {
   options: PredictionMarketOption[];
   line: number | null;
   correct_option: string | null;
+  actual_value: number | null;
   status: "open" | "closed" | "resolved" | "voided";
   created_at: string;
   resolved_at: string | null;
@@ -161,6 +162,7 @@ export type PredictionBet = {
   option_key: string;
   amount: number;
   payout: number | null;
+  predicted_value: number | null;
   created_at: string;
 };
 

@@ -18,6 +18,7 @@ import { RecentTrades } from "@/components/market/recent-trades";
 import { CommentSection } from "@/components/market/comment-section";
 import { RelatedMarkets } from "@/components/market/related-markets";
 import { PredictionMarketCard } from "@/components/prediction-market-card";
+import { ScorePredictionPanel } from "@/components/score-prediction-panel";
 import { AutoSync } from "@/components/auto-sync";
 import type { PredictionPoolOption } from "@/lib/types";
 
@@ -78,14 +79,23 @@ export default async function MarketPage({ params }: Props) {
           {/* Trading panel — mobile only (shown above chart) */}
           <div className="md:hidden space-y-4">
             <TradingPanel match={match} odds={odds} balance={balance} />
-            {predMarkets.map((pm) => (
-              <PredictionMarketCard
-                key={pm.id}
-                market={pm}
-                pools={predPools[pm.id] ?? {}}
-                balance={balance}
-              />
-            ))}
+            {predMarkets.map((pm) =>
+              pm.type === "score_prediction" ? (
+                <ScorePredictionPanel
+                  key={pm.id}
+                  market={pm}
+                  pools={predPools[pm.id] ?? {}}
+                  balance={balance}
+                />
+              ) : (
+                <PredictionMarketCard
+                  key={pm.id}
+                  market={pm}
+                  pools={predPools[pm.id] ?? {}}
+                  balance={balance}
+                />
+              )
+            )}
           </div>
 
           <MarketChart
@@ -120,14 +130,23 @@ export default async function MarketPage({ params }: Props) {
             odds={odds}
             balance={balance}
           />
-          {predMarkets.map((pm) => (
-            <PredictionMarketCard
-              key={pm.id}
-              market={pm}
-              pools={predPools[pm.id] ?? {}}
-              balance={balance}
-            />
-          ))}
+          {predMarkets.map((pm) =>
+            pm.type === "score_prediction" ? (
+              <ScorePredictionPanel
+                key={pm.id}
+                market={pm}
+                pools={predPools[pm.id] ?? {}}
+                balance={balance}
+              />
+            ) : (
+              <PredictionMarketCard
+                key={pm.id}
+                market={pm}
+                pools={predPools[pm.id] ?? {}}
+                balance={balance}
+              />
+            )
+          )}
           <RelatedMarkets markets={relatedWithOdds} />
         </div>
       </div>

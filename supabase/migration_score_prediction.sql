@@ -22,14 +22,12 @@ alter table public.prediction_markets
 
 -- Fix duplicate event-level markets bug:
 -- NULL != NULL in SQL so the unique constraint didn't work for event-level markets
--- Replace with a unique index using COALESCE
+
+-- First drop the old broken constraint
 alter table public.prediction_markets
   drop constraint if exists uq_prediction_market;
 
-create unique index if not exists uq_prediction_market_idx
-  on public.prediction_markets (event_key, coalesce(match_key, ''), type);
-
--- Delete duplicate event-level markets (keep the oldest one)
+-- Delete duplicate event-level markets BEFORE creating unique index (keep oldest)
 delete from public.prediction_markets a
 using public.prediction_markets b
 where a.id > b.id
@@ -37,6 +35,19 @@ where a.id > b.id
   and a.type = b.type
   and a.match_key is null
   and b.match_key is null;
+
+-- Also delete duplicates where match_key matches
+delete from public.prediction_markets a
+using public.prediction_markets b
+where a.id > b.id
+  and a.event_key = b.event_key
+  and a.type = b.type
+  and a.match_key is not null
+  and a.match_key = b.match_key;
+
+-- Now create the unique index (safe because duplicates are gone)
+create unique index if not exists uq_prediction_market_idx
+  on public.prediction_markets (event_key, coalesce(match_key, ''), type);
 
 -- 2. Add predicted_value column to prediction_bets
 -- For score predictions, this stores the user's predicted total score

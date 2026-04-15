@@ -83,20 +83,12 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
                 )}
               </div>
             ) : (
-              <>
-                <StopPropButton
-                  onClick={onBetRed}
-                  className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors tabular-nums"
-                >
-                  Yes {odds.redPct}¢
-                </StopPropButton>
-                <StopPropButton
-                  onClick={onBetBlue}
-                  className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors tabular-nums"
-                >
-                  No {odds.bluePct}¢
-                </StopPropButton>
-              </>
+              <StopPropButton
+                onClick={onBetRed}
+                className="rounded-md bg-[#ef4444]/15 px-3 py-1 text-[12px] font-semibold text-[#ef4444] hover:bg-[#ef4444]/25 transition-colors tabular-nums"
+              >
+                {odds.redPct}¢
+              </StopPropButton>
             )}
           </div>
         </div>
@@ -122,20 +114,12 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
                 )}
               </div>
             ) : (
-              <>
-                <StopPropButton
-                  onClick={onBetBlue}
-                  className="rounded-md bg-[#16332a] px-2.5 py-1 text-[11px] font-semibold text-[#22c55e] hover:bg-[#1a3f32] transition-colors tabular-nums"
-                >
-                  Yes {odds.bluePct}¢
-                </StopPropButton>
-                <StopPropButton
-                  onClick={onBetRed}
-                  className="rounded-md bg-[#3b1c1c] px-2.5 py-1 text-[11px] font-semibold text-[#ef4444] hover:bg-[#4a2222] transition-colors tabular-nums"
-                >
-                  No {odds.redPct}¢
-                </StopPropButton>
-              </>
+              <StopPropButton
+                onClick={onBetBlue}
+                className="rounded-md bg-[#3b82f6]/15 px-3 py-1 text-[12px] font-semibold text-[#3b82f6] hover:bg-[#3b82f6]/25 transition-colors tabular-nums"
+              >
+                {odds.bluePct}¢
+              </StopPropButton>
             )}
           </div>
         </div>

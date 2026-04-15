@@ -109,9 +109,10 @@ where a.id > b.id
   and a.match_key = b.match_key;
 
 -- Create proper unique index using COALESCE for NULLs
+-- Include line so ranking_position markets (ranks 1-8) are each unique per event
 drop index if exists uq_prediction_market_idx;
 create unique index uq_prediction_market_idx
-  on public.prediction_markets (event_key, coalesce(match_key, ''), type);
+  on public.prediction_markets (event_key, coalesce(match_key, ''), type, coalesce(line::text, ''));
 
 -- =============================================================
 -- 4. INDEXES
@@ -354,6 +355,10 @@ $$;
 -- error = |predicted_red - actual_red| + |predicted_blue - actual_blue|
 -- weight = 1 / (1 + error)^2
 -- =============================================================
+
+-- Drop old single-score signature if it exists (signature changed)
+drop function if exists public.resolve_score_prediction(uuid, numeric);
+
 create or replace function public.resolve_score_prediction(
   p_market_id   uuid,
   p_actual_red  numeric,

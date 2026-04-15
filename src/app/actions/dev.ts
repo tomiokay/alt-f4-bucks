@@ -77,15 +77,23 @@ export async function resolveTestMatch(formData: FormData) {
       p_result: result,
     });
 
-    // Send notifications
-    const notifications = unresolvedBets.map((bet) => {
+    // Fetch resolved bets to get payout amounts
+    const { data: resolvedBets } = await service
+      .from("pool_bets")
+      .select("id, user_id, side, amount, payout")
+      .eq("match_key", matchKey)
+      .in("id", unresolvedBets.map((b) => b.id));
+
+    const notifications = (resolvedBets ?? unresolvedBets).map((bet) => {
       const won = bet.side === winner;
+      const payout = (bet as { payout?: number }).payout ?? 0;
+      const multiplier = bet.amount > 0 ? (payout / bet.amount).toFixed(1) : "0";
       return {
         user_id: bet.user_id,
         type: won ? "bet_won" : "bet_lost",
         message: won
-          ? `You won your $${bet.amount} bet on ${bet.side} in ${matchKey}!`
-          : `You lost your $${bet.amount} bet on ${bet.side} in ${matchKey}.`,
+          ? `You won your $${bet.amount.toLocaleString()} bet on ${bet.side} in ${matchKey}! Paid out $${payout.toLocaleString()} (${multiplier}x)`
+          : `You lost your $${bet.amount.toLocaleString()} bet on ${bet.side} in ${matchKey}.`,
         meta: { match_key: matchKey, bet_id: bet.id },
       };
     });

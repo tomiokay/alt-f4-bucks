@@ -83,6 +83,54 @@ export async function getCurrentEvents(year?: number): Promise<TBAEvent[]> {
   });
 }
 
+export type TBARanking = {
+  rank: number;
+  team_key: string;
+  record: { wins: number; losses: number; ties: number };
+  qual_average: number | null;
+  matches_played: number;
+  dq: number;
+  sort_orders: number[];
+};
+
+export type TBAAlliance = {
+  name: string;
+  picks: string[]; // e.g. ["frc254", "frc971", "frc1678"]
+  status?: {
+    level: string; // "f", "sf", "qf"
+    status: string; // "won", "eliminated", "playing"
+    record: { wins: number; losses: number; ties: number };
+  };
+};
+
+export async function getEventRankings(eventKey: string): Promise<TBARanking[]> {
+  const res = await tbaFetch(`${TBA_BASE}/event/${eventKey}/rankings`);
+  if (!res || !res.ok) return [];
+  const data = await res.json();
+  if (!data?.rankings) return [];
+  return data.rankings.map((r: Record<string, unknown>) => ({
+    rank: r.rank as number,
+    team_key: r.team_key as string,
+    record: r.record as { wins: number; losses: number; ties: number },
+    qual_average: (r.qual_average as number) ?? null,
+    matches_played: r.matches_played as number,
+    dq: r.dq as number,
+    sort_orders: (r.sort_orders as number[]) ?? [],
+  }));
+}
+
+export async function getEventAlliances(eventKey: string): Promise<TBAAlliance[]> {
+  const res = await tbaFetch(`${TBA_BASE}/event/${eventKey}/alliances`);
+  if (!res || !res.ok) return [];
+  const data: TBAAlliance[] = await res.json();
+  if (!Array.isArray(data)) return [];
+  return data.map((a, i) => ({
+    name: a.name || `Alliance ${i + 1}`,
+    picks: a.picks ?? [],
+    status: a.status ?? undefined,
+  }));
+}
+
 export function tbaMatchToCache(
   match: TBAMatch,
   eventName: string

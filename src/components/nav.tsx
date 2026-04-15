@@ -29,12 +29,11 @@ type NavProps = {
 const CATEGORY_LINKS = [
   { href: "/", label: "Trending" },
   { href: "/betting", label: "Markets" },
-  { href: "/popular", label: "Popular" },
+  { href: "/events", label: "Events" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/dashboard", label: "Portfolio" },
   { href: "/manager", label: "Admin", role: ["manager", "admin"] as string[] },
   { href: "/dev", label: "Dev", role: ["manager", "admin"] as string[] },
-  // Store hidden for now
 ];
 
 export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 }: NavProps) {

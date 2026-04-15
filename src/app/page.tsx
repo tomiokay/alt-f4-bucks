@@ -133,7 +133,13 @@ export default async function HomePage() {
             balance={balance}
             hotTopics={hotTopics}
           />
+          {/* Breaking news + hot topics — mobile (below markets) */}
+          <div className="lg:hidden space-y-5">
+            <BreakingNews items={breaking} allCompleted={completed} />
+            <HotTopics topics={hotTopics} />
+          </div>
         </div>
+        {/* Sidebar — desktop */}
         <div className="hidden lg:block w-[320px] shrink-0 space-y-5">
           <BreakingNews items={breaking} allCompleted={completed} />
           <HotTopics topics={hotTopics} />

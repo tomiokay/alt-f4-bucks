@@ -129,7 +129,7 @@ export function HowItWorksModal({ onClose }: Props) {
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-[380px] rounded-2xl bg-[#161b22] border border-[#30363d] overflow-hidden shadow-2xl">
+      <div className="relative w-[calc(100vw-2rem)] sm:w-[380px] max-w-[380px] rounded-2xl bg-[#161b22] border border-[#30363d] overflow-hidden shadow-2xl">
         {/* Close button */}
         <button
           onClick={onClose}

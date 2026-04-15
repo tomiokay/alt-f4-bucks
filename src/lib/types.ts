@@ -4,6 +4,7 @@ export type Profile = {
   id: string;
   display_name: string;
   role: Role;
+  team_number: string | null;
   created_at: string;
 };
 

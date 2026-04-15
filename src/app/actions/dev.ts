@@ -147,3 +147,60 @@ export async function grantBucks(formData: FormData) {
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+const RESET_PASSWORD = process.env.RESET_PASSWORD || "altf4reset2026";
+
+export async function resetEverything(formData: FormData) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const password = formData.get("password") as string;
+  if (password !== RESET_PASSWORD) {
+    return { error: "Wrong reset password" };
+  }
+
+  // Delete all bets, transactions (except welcome bonuses), odds history, notifications, comments
+  await service.from("odds_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await service.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await service.from("comments").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await service.from("pool_bets").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await service.from("transactions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+  // Re-grant 1000 AF4 to all users
+  const { data: profiles } = await service.from("profiles").select("id");
+  if (profiles) {
+    const bonuses = profiles.map((p) => ({
+      type: "award" as const,
+      amount: 1000,
+      to_user_id: p.id,
+      reason: "Welcome bonus — 1,000 AF4 to get started",
+      category: "bonus",
+    }));
+    await service.from("transactions").insert(bonuses);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
+  revalidatePath("/betting");
+  return { success: true };
+}
+
+export async function updateTeamNumber(formData: FormData) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const userId = formData.get("userId") as string;
+  const teamNumber = (formData.get("teamNumber") as string)?.trim() || null;
+
+  const { error } = await service
+    .from("profiles")
+    .update({ team_number: teamNumber })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/leaderboard");
+  return { success: true };
+}

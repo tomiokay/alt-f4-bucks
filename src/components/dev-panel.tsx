@@ -2,12 +2,13 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createTestMatch, resolveTestMatch, grantBucks } from "@/app/actions/dev";
-import type { MatchCache } from "@/lib/types";
+import { createTestMatch, resolveTestMatch, grantBucks, resetEverything, updateTeamNumber } from "@/app/actions/dev";
+import type { MatchCache, Profile } from "@/lib/types";
 
 type Props = {
   userId: string;
   balance: number;
+  allProfiles?: Profile[];
   unresolvedMatches: MatchCache[];
 };
 
@@ -17,7 +18,7 @@ const COMP_LABELS: Record<string, string> = {
   f: "Final",
 };
 
-export function DevPanel({ userId, balance, unresolvedMatches }: Props) {
+export function DevPanel({ userId, balance, unresolvedMatches, allProfiles = [] }: Props) {
   const router = useRouter();
 
   return (
@@ -25,6 +26,8 @@ export function DevPanel({ userId, balance, unresolvedMatches }: Props) {
       <GrantBucksCard userId={userId} balance={balance} router={router} />
       <CreateMatchCard router={router} />
       <ResolveMatchCard matches={unresolvedMatches} router={router} />
+      <TeamNumberCard profiles={allProfiles} router={router} />
+      <ResetCard router={router} />
     </div>
   );
 }
@@ -290,6 +293,109 @@ function ResolveMatchCard({ matches, router }: { matches: MatchCache[]; router: 
         className="w-full rounded-lg bg-[#f59e0b] py-2 text-[13px] font-semibold text-black hover:bg-[#d97706] disabled:opacity-50 transition-colors"
       >
         {loading ? "Resolving..." : "Resolve & Payout"}
+      </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function TeamNumberCard({ profiles, router }: { profiles: Profile[]; router: ReturnType<typeof useRouter> }) {
+  const [selectedUser, setSelectedUser] = useState(profiles[0]?.id ?? "");
+  const [teamNum, setTeamNum] = useState(profiles[0]?.team_number ?? "");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const ref = useRef(false);
+
+  async function handleUpdate() {
+    if (ref.current || !selectedUser) return;
+    ref.current = true;
+    setLoading(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.set("userId", selectedUser);
+    fd.set("teamNumber", teamNum);
+    const res = await updateTeamNumber(fd);
+    setLoading(false);
+    ref.current = false;
+    setMsg(res.error ?? "Updated!");
+    if (res.success) router.refresh();
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161b22] p-5 space-y-3">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#e6edf3]">Set Team Number</h3>
+        <p className="text-[11px] text-[#484f58]">Assign FRC team numbers to users</p>
+      </div>
+      <select
+        value={selectedUser}
+        onChange={(e) => {
+          setSelectedUser(e.target.value);
+          const p = profiles.find((pr) => pr.id === e.target.value);
+          setTeamNum(p?.team_number ?? "");
+        }}
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-2 text-[12px] text-[#e6edf3]"
+      >
+        {profiles.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.display_name} {p.team_number ? `(${p.team_number})` : ""}
+          </option>
+        ))}
+      </select>
+      <input
+        value={teamNum}
+        onChange={(e) => setTeamNum(e.target.value)}
+        placeholder="e.g. 7558"
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-3 text-[12px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
+      />
+      <button onClick={handleUpdate} disabled={loading} className="w-full rounded-lg bg-[#388bfd] py-2 text-[13px] font-semibold text-white hover:bg-[#2563eb] disabled:opacity-50 transition-colors">
+        {loading ? "Saving..." : "Set Team Number"}
+      </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function ResetCard({ router }: { router: ReturnType<typeof useRouter> }) {
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const ref = useRef(false);
+
+  async function handleReset() {
+    if (ref.current) return;
+    if (!confirm) { setConfirm(true); return; }
+    ref.current = true;
+    setLoading(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.set("password", password);
+    const res = await resetEverything(fd);
+    setLoading(false);
+    ref.current = false;
+    setConfirm(false);
+    setPassword("");
+    if (res.error) { setMsg(`Error: ${res.error}`); }
+    else { setMsg("Everything reset! All users back to $1,000."); router.refresh(); }
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161b22] border border-[#ef4444]/30 p-5 space-y-3">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#ef4444]">Reset Everything</h3>
+        <p className="text-[11px] text-[#484f58]">Deletes all bets, transactions, comments. Gives everyone $1,000 fresh.</p>
+      </div>
+      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Reset password"
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-3 text-[12px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#ef4444] focus:outline-none" />
+      {confirm && (
+        <div className="rounded-lg bg-[#ef4444]/10 border border-[#ef4444]/30 px-3 py-2">
+          <p className="text-[12px] text-[#ef4444] font-medium">This will permanently delete ALL data. Click again to confirm.</p>
+        </div>
+      )}
+      <button onClick={handleReset} disabled={loading || !password}
+        className="w-full rounded-lg bg-[#ef4444] py-2 text-[13px] font-semibold text-white hover:bg-[#dc2626] disabled:opacity-50 transition-colors">
+        {loading ? "Resetting..." : confirm ? "Confirm Reset" : "Reset Everything"}
       </button>
       {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
     </div>

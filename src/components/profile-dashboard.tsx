@@ -205,7 +205,7 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
 
           {/* Positions table */}
           <div className="rounded-xl bg-[#161b22] overflow-hidden">
-            <div className="grid grid-cols-[60px_1fr_120px_140px] gap-2 px-4 py-2.5 text-[10px] font-medium text-[#484f58] uppercase tracking-wider border-b border-[#21262d]">
+            <div className="hidden sm:grid grid-cols-[60px_1fr_120px_140px] gap-2 px-4 py-2.5 text-[10px] font-medium text-[#484f58] uppercase tracking-wider border-b border-[#21262d]">
               <span>Result</span>
               <span>Market</span>
               <span className="text-right">Total Traded</span>
@@ -221,7 +221,7 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
                 <Link
                   key={group.matchKey}
                   href={`/market/${encodeURIComponent(group.matchKey)}`}
-                  className="grid grid-cols-[60px_1fr_120px_140px] gap-2 items-center px-4 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
+                  className="flex flex-col sm:grid sm:grid-cols-[60px_1fr_120px_140px] gap-1 sm:gap-2 sm:items-center px-4 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
                 >
                   {/* Result badge */}
                   <div>

@@ -109,7 +109,7 @@ export function NotificationsDropdown({ notifications, unreadCount }: Props) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-10 z-50 w-[360px] rounded-xl bg-[#161b22] border border-[#30363d] shadow-2xl overflow-hidden">
+          <div className="absolute right-0 top-10 z-50 w-[calc(100vw-2rem)] sm:w-[360px] max-w-[360px] rounded-xl bg-[#161b22] border border-[#30363d] shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#21262d]">
               <h3 className="text-[14px] font-semibold text-[#e6edf3]">Notifications</h3>
               {unreadCount > 0 && (

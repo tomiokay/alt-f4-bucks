@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/db/profiles";
+import { getCurrentProfile, getAllProfiles } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import { DevPanel } from "@/components/dev-panel";
 import {
@@ -14,10 +14,12 @@ export default async function DevPage() {
     redirect("/");
   }
 
-  const balance = await getUserBalance(profile.id);
-  const eventKeys = await getActiveEventKeys();
+  const [balance, eventKeys, allProfiles] = await Promise.all([
+    getUserBalance(profile.id),
+    getActiveEventKeys(),
+    getAllProfiles(),
+  ]);
 
-  // Get all unresolved matches for the resolve dropdown
   let unresolvedMatches: MatchCache[] = [];
   if (eventKeys.length > 0) {
     const arrays = await Promise.all(eventKeys.map((ek) => getCachedMatches(ek)));
@@ -37,6 +39,7 @@ export default async function DevPage() {
         userId={profile.id}
         balance={balance}
         unresolvedMatches={unresolvedMatches}
+        allProfiles={allProfiles}
       />
     </div>
   );

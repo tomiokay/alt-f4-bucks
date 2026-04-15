@@ -69,11 +69,11 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
 
           {/* Table */}
           <div className="rounded-xl bg-[#161b22] overflow-hidden">
-            <div className="grid grid-cols-[40px_1fr_120px_120px] gap-2 px-5 py-2.5 text-[10px] font-medium text-[#484f58] uppercase tracking-wider border-b border-[#21262d]">
+            <div className="grid grid-cols-[32px_1fr_80px] sm:grid-cols-[40px_1fr_120px_120px] gap-2 px-4 sm:px-5 py-2.5 text-[10px] font-medium text-[#484f58] uppercase tracking-wider border-b border-[#21262d]">
               <span>#</span>
               <span>Trader</span>
               <span className="text-right">Portfolio</span>
-              <span className="text-right">P&L</span>
+              <span className="text-right hidden sm:block">P&L</span>
             </div>
 
             {filtered.length === 0 ? (
@@ -95,7 +95,7 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                   <Link
                     key={entry.user_id}
                     href={`/profile/${entry.user_id}`}
-                    className="grid grid-cols-[40px_1fr_120px_120px] gap-2 items-center px-5 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
+                    className="grid grid-cols-[32px_1fr_80px] sm:grid-cols-[40px_1fr_120px_120px] gap-2 items-center px-4 sm:px-5 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
                   >
                     <span className={cn(
                       "text-[14px] tabular-nums",
@@ -124,7 +124,7 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                       ${entry.balance.toLocaleString()}
                     </span>
 
-                    <span className="text-right text-[14px] text-[#7d8590] tabular-nums font-mono">
+                    <span className="text-right text-[14px] text-[#7d8590] tabular-nums font-mono hidden sm:block">
                       {entry.balance >= 1000
                         ? `+$${(entry.balance - 1000).toLocaleString()}`
                         : `-$${(1000 - entry.balance).toLocaleString()}`

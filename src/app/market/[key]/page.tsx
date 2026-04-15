@@ -53,10 +53,16 @@ export default async function MarketPage({ params }: Props) {
       <AutoSync />
 
       {/* Two column layout */}
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
         {/* Left column — main content */}
         <div className="flex-1 min-w-0 space-y-5">
           <MarketHeader match={match} odds={odds} />
+
+          {/* Trading panel — mobile only (shown above chart) */}
+          <div className="md:hidden">
+            <TradingPanel match={match} odds={odds} balance={balance} />
+          </div>
+
           <MarketChart
             redPct={odds.redPct}
             bluePct={odds.bluePct}
@@ -82,7 +88,7 @@ export default async function MarketPage({ params }: Props) {
           />
         </div>
 
-        {/* Right column — trading + related */}
+        {/* Right column — trading + related (desktop only) */}
         <div className="hidden md:block w-[320px] shrink-0 space-y-4">
           <TradingPanel
             match={match}

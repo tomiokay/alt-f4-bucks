@@ -52,10 +52,11 @@ export async function placePredictionBet(formData: FormData) {
   return { success: true, betId: data };
 }
 
-// Place a score prediction bet (user predicts exact total score)
+// Place a score prediction bet (user predicts red and blue scores)
 const scorePredictionSchema = z.object({
   marketId: z.string().uuid("Invalid market"),
-  predictedScore: z.coerce.number().int().min(0, "Score must be positive"),
+  predictedRed: z.coerce.number().int().min(0, "Red score must be positive"),
+  predictedBlue: z.coerce.number().int().min(0, "Blue score must be positive"),
   amount: z.coerce.number().int().min(1, "Bet at least 1 Buck"),
 });
 
@@ -69,7 +70,8 @@ export async function placeScorePrediction(formData: FormData) {
 
   const parsed = scorePredictionSchema.safeParse({
     marketId: formData.get("marketId"),
-    predictedScore: formData.get("predictedScore"),
+    predictedRed: formData.get("predictedRed"),
+    predictedBlue: formData.get("predictedBlue"),
     amount: formData.get("amount"),
   });
 
@@ -80,7 +82,8 @@ export async function placeScorePrediction(formData: FormData) {
   const { data, error } = await supabase.rpc("place_score_prediction", {
     p_user_id: user.id,
     p_market_id: parsed.data.marketId,
-    p_predicted_score: parsed.data.predictedScore,
+    p_predicted_red: parsed.data.predictedRed,
+    p_predicted_blue: parsed.data.predictedBlue,
     p_amount: parsed.data.amount,
   });
 
@@ -146,9 +149,7 @@ export async function ensureEventMarkets(
   const upcomingMatches = matches.filter((m) => !m.is_complete);
   for (const match of upcomingMatches) {
     const pred = predictions[match.match_key];
-    const predTotal = pred?.redPredScore && pred?.bluePredScore
-      ? pred.redPredScore + pred.bluePredScore
-      : null;
+    const hasPred = pred?.redPredScore != null && pred?.bluePredScore != null;
 
     if (await marketExists(service, eventKey, match.match_key, "score_prediction")) continue;
 
@@ -157,11 +158,11 @@ export async function ensureEventMarkets(
       match_key: match.match_key,
       type: "score_prediction",
       title: `Predict the Score`,
-      description: predTotal
-        ? `Statbotics predicts ~${Math.round(predTotal)} total. Closer to actual = bigger payout.`
-        : `Predict the combined score. Closer to actual = bigger payout.`,
-      options: [{ key: "score", label: "Predict total score" }],
-      line: predTotal ? Math.round(predTotal) : null,
+      description: hasPred
+        ? `Statbotics predicts Red ~${Math.round(pred.redPredScore!)} / Blue ~${Math.round(pred.bluePredScore!)}. Closer to actual scores = bigger payout.`
+        : `Predict the Red and Blue alliance scores. Closer to actual = bigger payout.`,
+      options: [{ key: "score", label: "Predict Red & Blue scores" }],
+      line: hasPred ? Math.round(pred.redPredScore! + pred.bluePredScore!) : null,
       status: "open",
     });
   }
@@ -246,12 +247,11 @@ export async function resolveScoreMarkets(eventKey: string) {
 
     if (!match?.is_complete || match.red_score === null || match.blue_score === null) continue;
 
-    const totalScore = match.red_score + match.blue_score;
-
     try {
       const { data: count } = await service.rpc("resolve_score_prediction", {
         p_market_id: market.id,
-        p_actual_score: totalScore,
+        p_actual_red: match.red_score,
+        p_actual_blue: match.blue_score,
       });
       resolved += (count as number) ?? 0;
     } catch {

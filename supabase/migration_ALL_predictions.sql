@@ -28,6 +28,12 @@ create table if not exists public.prediction_markets (
 alter table public.prediction_markets
   add column if not exists actual_value numeric;
 
+alter table public.prediction_markets
+  add column if not exists actual_red numeric;
+
+alter table public.prediction_markets
+  add column if not exists actual_blue numeric;
+
 -- Prediction bets table
 create table if not exists public.prediction_bets (
   id            uuid primary key default gen_random_uuid(),
@@ -42,6 +48,12 @@ create table if not exists public.prediction_bets (
 -- Add columns that may be missing
 alter table public.prediction_bets
   add column if not exists predicted_value numeric;
+
+alter table public.prediction_bets
+  add column if not exists predicted_red numeric;
+
+alter table public.prediction_bets
+  add column if not exists predicted_blue numeric;
 
 -- =============================================================
 -- 2. CONSTRAINTS — drop old, add current
@@ -280,12 +292,17 @@ end;
 $$;
 
 -- =============================================================
--- 8. RPC — Place score prediction (accuracy-based)
+-- 8. RPC — Place score prediction (red + blue scores)
 -- =============================================================
+
+-- Drop old version (single-score signature) if it exists
+drop function if exists public.place_score_prediction(uuid, uuid, numeric, integer);
+
 create or replace function public.place_score_prediction(
   p_user_id       uuid,
   p_market_id     uuid,
-  p_predicted_score numeric,
+  p_predicted_red  numeric,
+  p_predicted_blue numeric,
   p_amount        integer
 )
 returns uuid
@@ -298,7 +315,9 @@ declare
   v_bet_id  uuid;
 begin
   if p_amount < 1 then raise exception 'Bet must be at least 1 Buck'; end if;
-  if p_predicted_score < 0 then raise exception 'Predicted score must be positive'; end if;
+  if p_predicted_red < 0 or p_predicted_blue < 0 then
+    raise exception 'Scores must be positive';
+  end if;
 
   select * into v_market from public.prediction_markets where id = p_market_id for update;
   if not found then raise exception 'Market not found'; end if;
@@ -312,14 +331,19 @@ begin
     raise exception 'Insufficient balance. You have % but need %', v_balance, p_amount;
   end if;
 
-  insert into public.prediction_bets (user_id, market_id, option_key, amount, predicted_value)
-  values (p_user_id, p_market_id, 'score', p_amount, p_predicted_score)
+  insert into public.prediction_bets (user_id, market_id, option_key, amount, predicted_red, predicted_blue, predicted_value)
+  values (p_user_id, p_market_id, 'score', p_amount, p_predicted_red, p_predicted_blue, p_predicted_red + p_predicted_blue)
   returning id into v_bet_id;
 
   insert into public.transactions (type, amount, to_user_id, by_user_id, reason, category, meta)
   values ('adjustment', -p_amount, p_user_id, p_user_id,
     'Score prediction — ' || v_market.title, 'prediction_escrow',
-    jsonb_build_object('prediction_bet_id', v_bet_id, 'market_id', p_market_id, 'predicted_score', p_predicted_score));
+    jsonb_build_object(
+      'prediction_bet_id', v_bet_id,
+      'market_id', p_market_id,
+      'predicted_red', p_predicted_red,
+      'predicted_blue', p_predicted_blue
+    ));
 
   return v_bet_id;
 end;
@@ -327,11 +351,13 @@ $$;
 
 -- =============================================================
 -- 9. RPC — Resolve score prediction (accuracy-weighted payout)
--- weight = 1 / (1 + |predicted - actual|)^2
+-- error = |predicted_red - actual_red| + |predicted_blue - actual_blue|
+-- weight = 1 / (1 + error)^2
 -- =============================================================
 create or replace function public.resolve_score_prediction(
   p_market_id   uuid,
-  p_actual_score numeric
+  p_actual_red  numeric,
+  p_actual_blue numeric
 )
 returns int
 language plpgsql
@@ -343,13 +369,17 @@ declare
   v_total_weighted numeric := 0;
   v_bet           record;
   v_weight        numeric;
+  v_error         numeric;
   v_payout        int;
   v_resolved      int := 0;
   v_payout_sum    int := 0;
   v_remainder     int;
   v_largest_bet_id uuid;
   v_largest_weighted numeric := 0;
+  v_actual_total  numeric;
 begin
+  v_actual_total := p_actual_red + p_actual_blue;
+
   select * into v_market from public.prediction_markets where id = p_market_id for update;
   if not found then raise exception 'Market not found'; end if;
   if v_market.status = 'resolved' then return 0; end if;
@@ -358,13 +388,14 @@ begin
   from public.prediction_bets where market_id = p_market_id and payout is null;
 
   if v_total_pool = 0 then
-    update public.prediction_markets set status = 'resolved', actual_value = p_actual_score, resolved_at = now() where id = p_market_id;
+    update public.prediction_markets set status = 'resolved', actual_value = v_actual_total, resolved_at = now() where id = p_market_id;
     return 0;
   end if;
 
-  -- First pass: calculate total weighted amount
+  -- First pass: calculate total weighted amount using combined red+blue error
   for v_bet in select * from public.prediction_bets where market_id = p_market_id and payout is null loop
-    v_weight := 1.0 / power(1 + abs(v_bet.predicted_value - p_actual_score), 2);
+    v_error := abs(coalesce(v_bet.predicted_red, 0) - p_actual_red) + abs(coalesce(v_bet.predicted_blue, 0) - p_actual_blue);
+    v_weight := 1.0 / power(1 + v_error, 2);
     v_total_weighted := v_total_weighted + (v_bet.amount * v_weight);
   end loop;
 
@@ -377,14 +408,15 @@ begin
         jsonb_build_object('prediction_bet_id', v_bet.id, 'market_id', p_market_id));
       v_resolved := v_resolved + 1;
     end loop;
-    update public.prediction_markets set status = 'resolved', actual_value = p_actual_score, resolved_at = now() where id = p_market_id;
+    update public.prediction_markets set status = 'resolved', actual_value = v_actual_total, resolved_at = now() where id = p_market_id;
     return v_resolved;
   end if;
 
   -- Second pass: distribute payouts
   v_largest_bet_id := null;
   for v_bet in select * from public.prediction_bets where market_id = p_market_id and payout is null order by amount desc loop
-    v_weight := 1.0 / power(1 + abs(v_bet.predicted_value - p_actual_score), 2);
+    v_error := abs(coalesce(v_bet.predicted_red, 0) - p_actual_red) + abs(coalesce(v_bet.predicted_blue, 0) - p_actual_blue);
+    v_weight := 1.0 / power(1 + v_error, 2);
     v_payout := floor((v_bet.amount * v_weight) / v_total_weighted * v_total_pool);
     v_payout_sum := v_payout_sum + v_payout;
 
@@ -399,8 +431,9 @@ begin
       values ('adjustment', v_payout, v_bet.user_id, v_bet.user_id,
         'Score prediction won — ' || v_market.title, 'prediction_won',
         jsonb_build_object('prediction_bet_id', v_bet.id, 'market_id', p_market_id,
-          'predicted', v_bet.predicted_value, 'actual', p_actual_score,
-          'error', abs(v_bet.predicted_value - p_actual_score)));
+          'predicted_red', v_bet.predicted_red, 'predicted_blue', v_bet.predicted_blue,
+          'actual_red', p_actual_red, 'actual_blue', p_actual_blue,
+          'error', v_error));
     end if;
     v_resolved := v_resolved + 1;
   end loop;
@@ -416,7 +449,7 @@ begin
       jsonb_build_object('prediction_bet_id', v_largest_bet_id, 'type', 'remainder'));
   end if;
 
-  update public.prediction_markets set status = 'resolved', actual_value = p_actual_score, resolved_at = now() where id = p_market_id;
+  update public.prediction_markets set status = 'resolved', actual_value = v_actual_total, resolved_at = now() where id = p_market_id;
   return v_resolved;
 end;
 $$;

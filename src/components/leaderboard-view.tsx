@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import type { LeaderboardEntry } from "@/lib/types";
 
 type BigWin = {
@@ -71,8 +72,8 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
             <div className="grid grid-cols-[40px_1fr_120px_120px] gap-2 px-5 py-2.5 text-[10px] font-medium text-[#484f58] uppercase tracking-wider border-b border-[#21262d]">
               <span>#</span>
               <span>Trader</span>
-              <span className="text-right">Profit/Loss</span>
-              <span className="text-right">Volume</span>
+              <span className="text-right">Portfolio</span>
+              <span className="text-right">P&L</span>
             </div>
 
             {filtered.length === 0 ? (
@@ -91,8 +92,9 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                 const isTop3 = i < 3;
 
                 return (
-                  <div
+                  <Link
                     key={entry.user_id}
+                    href={`/profile/${entry.user_id}`}
                     className="grid grid-cols-[40px_1fr_120px_120px] gap-2 items-center px-5 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
                   >
                     <span className={cn(
@@ -119,13 +121,16 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                       "text-right text-[14px] tabular-nums font-mono font-medium",
                       entry.balance > 1000 ? "text-[#22c55e]" : entry.balance < 1000 ? "text-[#ef4444]" : "text-[#e6edf3]"
                     )}>
-                      {entry.balance > 1000 ? "+" : ""}${(entry.balance - 1000).toLocaleString()}
+                      ${entry.balance.toLocaleString()}
                     </span>
 
                     <span className="text-right text-[14px] text-[#7d8590] tabular-nums font-mono">
-                      ${entry.balance.toLocaleString()}
+                      {entry.balance >= 1000
+                        ? `+$${(entry.balance - 1000).toLocaleString()}`
+                        : `-$${(1000 - entry.balance).toLocaleString()}`
+                      }
                     </span>
-                  </div>
+                  </Link>
                 );
               })
             )}

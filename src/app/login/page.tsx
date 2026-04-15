@@ -5,6 +5,31 @@ import { useSearchParams } from "next/navigation";
 import { login, signup } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { HowItWorksButton } from "@/components/how-it-works";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+
+function PasswordInput({ name, placeholder }: { name: string; placeholder?: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        name={name}
+        type={show ? "text" : "password"}
+        required
+        minLength={6}
+        placeholder={placeholder}
+        className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 pr-10 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#484f58] hover:text-[#7d8590] transition-colors"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -25,6 +50,16 @@ export default function LoginPage() {
   async function handleSignup(formData: FormData) {
     setError(null);
     setLoading(true);
+
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (password !== confirmPassword) {
+      setLoading(false);
+      setError("Passwords don't match");
+      return;
+    }
+
     const result = await signup(formData);
     setLoading(false);
     if (result?.error) setError(result.error);
@@ -34,9 +69,7 @@ export default function LoginPage() {
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#22c55e] text-white text-sm font-black">
-            F4
-          </div>
+          <Image src="/logo.avif" alt="Alt-F4 Bucks" width={48} height={48} className="mx-auto mb-3 rounded-lg" />
           <h1 className="text-[18px] font-semibold text-[#e6edf3]">
             Alt-F4 Bucks
           </h1>
@@ -49,10 +82,9 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-xl bg-[#161b22] overflow-hidden">
-          {/* Tab toggle */}
           <div className="flex border-b border-[#21262d]">
             <button
-              onClick={() => setTab("login")}
+              onClick={() => { setTab("login"); setError(null); }}
               className={cn(
                 "flex-1 py-3 text-[13px] font-medium transition-colors border-b-2",
                 tab === "login"
@@ -63,7 +95,7 @@ export default function LoginPage() {
               Log In
             </button>
             <button
-              onClick={() => setTab("signup")}
+              onClick={() => { setTab("signup"); setError(null); }}
               className={cn(
                 "flex-1 py-3 text-[13px] font-medium transition-colors border-b-2",
                 tab === "signup"
@@ -84,19 +116,13 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     required
-                    placeholder="you@team7558.com"
+                    placeholder="you@example.com"
                     className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[12px] text-[#7d8590]">Password</label>
-                  <input
-                    name="password"
-                    type="password"
-                    required
-                    minLength={6}
-                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
-                  />
+                  <PasswordInput name="password" />
                 </div>
                 {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
                 <button
@@ -124,19 +150,17 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     required
-                    placeholder="you@team7558.com"
+                    placeholder="you@example.com"
                     className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[12px] text-[#7d8590]">Password</label>
-                  <input
-                    name="password"
-                    type="password"
-                    required
-                    minLength={6}
-                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
-                  />
+                  <PasswordInput name="password" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[12px] text-[#7d8590]">Confirm password</label>
+                  <PasswordInput name="confirmPassword" />
                 </div>
                 {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
                 <button

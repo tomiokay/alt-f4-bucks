@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/db/profiles";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -49,6 +50,22 @@ export async function awardBucks(formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Send notification to the recipient
+  try {
+    const service = await createServiceClient();
+    const isPositive = parsed.data.amount > 0;
+    await service.from("notifications").insert({
+      user_id: parsed.data.toUserId,
+      type: "welcome",
+      message: isPositive
+        ? `You received $${parsed.data.amount.toLocaleString()} AF4 — ${parsed.data.reason}`
+        : `$${Math.abs(parsed.data.amount).toLocaleString()} AF4 was deducted — ${parsed.data.reason}`,
+      meta: { by: profile.display_name, category: parsed.data.category },
+    });
+  } catch {
+    // Non-critical
   }
 
   revalidatePath("/manager");

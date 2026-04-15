@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -62,9 +63,7 @@ export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 
             href="/"
             className="flex items-center gap-2 shrink-0"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#22c55e] text-white text-xs font-black">
-              F4
-            </div>
+            <Image src="/logo.avif" alt="Alt-F4 Bucks" width={32} height={32} className="rounded-md" />
             <span className="text-[15px] font-semibold text-foreground hidden sm:block">
               Alt-F4 Bucks
             </span>

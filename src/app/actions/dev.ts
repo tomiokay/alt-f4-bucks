@@ -1,9 +1,19 @@
 "use server";
 
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/db/profiles";
 import { revalidatePath } from "next/cache";
 
+async function requireAdmin() {
+  const profile = await getCurrentProfile();
+  if (!profile || !["manager", "admin"].includes(profile.role)) {
+    throw new Error("Unauthorized");
+  }
+  return profile;
+}
+
 export async function createTestMatch(formData: FormData) {
+  await requireAdmin();
   const service = await createServiceClient();
 
   const eventName = formData.get("eventName") as string || "Dev Test Event";
@@ -40,6 +50,7 @@ export async function createTestMatch(formData: FormData) {
 }
 
 export async function resolveTestMatch(formData: FormData) {
+  await requireAdmin();
   const service = await createServiceClient();
 
   const matchKey = formData.get("matchKey") as string;
@@ -116,6 +127,7 @@ export async function resolveTestMatch(formData: FormData) {
 }
 
 export async function grantBucks(formData: FormData) {
+  await requireAdmin();
   const service = await createServiceClient();
 
   const userId = formData.get("userId") as string;

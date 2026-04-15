@@ -128,23 +128,31 @@ export async function searchMatches(query: string, limit = 100): Promise<MatchCa
   // Expand aliases
   const aliases = SEARCH_ALIASES[q] ?? [];
 
-  // Build search terms: original query + any aliases
-  const searchTerms = [q, ...aliases];
+  // Sanitize: remove characters that could break PostgREST filters
+  const sanitize = (s: string) => s.replace(/[%(),.*]/g, "");
 
-  // Search by event name or match key for each term
+  const searchTerms = [q, ...aliases].map(sanitize).filter(Boolean);
+
   let results: MatchCache[] = [];
 
   for (const term of searchTerms) {
-    const { data } = await supabase
+    // Use separate ilike calls to avoid filter injection
+    const { data: nameData } = await supabase
       .from("match_cache")
       .select("*")
-      .or(`event_name.ilike.%${term}%,match_key.ilike.%${term}%`)
+      .ilike("event_name", `%${term}%`)
       .order("scheduled_time", { ascending: true })
       .limit(limit);
 
-    if (data && data.length > 0) {
-      results.push(...(data as MatchCache[]));
-    }
+    const { data: keyData } = await supabase
+      .from("match_cache")
+      .select("*")
+      .ilike("match_key", `%${term}%`)
+      .order("scheduled_time", { ascending: true })
+      .limit(limit);
+
+    if (nameData) results.push(...(nameData as MatchCache[]));
+    if (keyData) results.push(...(keyData as MatchCache[]));
   }
 
   // Also try comp_level filter if query matches

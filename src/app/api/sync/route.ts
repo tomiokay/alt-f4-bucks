@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getEventMatches, getCurrentEvents, tbaMatchToCache } from "@/lib/tba";
 import { getActiveEventKeys } from "@/db/bets";
@@ -6,7 +6,17 @@ import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Allow internal calls (from AutoSync component) and cron jobs with secret
+  const authHeader = request.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  const referer = request.headers.get("referer");
+  const isInternal = referer && (referer.includes("localhost") || referer.includes("alt-f4-bucks"));
+
+  if (!isInternal && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const service = await createServiceClient();
 
   // Get current/upcoming events from TBA (next 2 weeks)

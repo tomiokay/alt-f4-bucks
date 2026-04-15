@@ -80,7 +80,7 @@ export default async function HomePage() {
     try {
       const markets = await getEventPredictionMarkets(ek);
       const eventLevelMarkets = markets.filter(
-        (m) => m.status === "open" && (m.type === "event_winner" || m.type === "ranking_top1")
+        (m) => m.status === "open" && m.match_key === null && (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")
       );
       allPredMarkets.push(...eventLevelMarkets);
 

@@ -54,6 +54,7 @@ export function FeaturedCarousel({
     slides.push({ type: "match", data: featured });
   }
   for (const pm of predictionMarkets) {
+    if (pm.status !== "open") continue;
     slides.push({ type: "prediction", data: pm });
   }
 

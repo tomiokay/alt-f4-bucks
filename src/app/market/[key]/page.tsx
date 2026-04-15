@@ -9,6 +9,7 @@ import {
   getRelatedMatches,
   getOddsHistory,
 } from "@/db/bets";
+import { getMatchPredictionMarkets, getPredictionPoolSummary } from "@/db/predictions";
 import { calculateOdds } from "@/lib/odds";
 import { MarketHeader } from "@/components/market/market-header";
 import { MarketChart } from "@/components/market/market-chart";
@@ -16,7 +17,9 @@ import { TradingPanel } from "@/components/market/trading-panel";
 import { RecentTrades } from "@/components/market/recent-trades";
 import { CommentSection } from "@/components/market/comment-section";
 import { RelatedMarkets } from "@/components/market/related-markets";
+import { PredictionMarketCard } from "@/components/prediction-market-card";
 import { AutoSync } from "@/components/auto-sync";
+import type { PredictionPoolOption } from "@/lib/types";
 
 type Props = {
   params: Promise<{ key: string }>;
@@ -32,14 +35,28 @@ export default async function MarketPage({ params }: Props) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [balance, pool, bets, comments, related, oddsHistory] = await Promise.all([
+  const [balance, pool, bets, comments, related, oddsHistory, predMarkets] = await Promise.all([
     getUserBalance(profile.id),
     getPoolSummary(matchKey),
     getMatchPoolBets(matchKey),
     getMatchComments(matchKey),
     getRelatedMatches(match.event_key, matchKey),
     getOddsHistory(matchKey),
+    getMatchPredictionMarkets(matchKey),
   ]);
+
+  // Fetch pools for each prediction market
+  const predPools: Record<string, Record<string, PredictionPoolOption>> = {};
+  await Promise.all(
+    predMarkets.map(async (m) => {
+      const poolMap = await getPredictionPoolSummary(m.id);
+      const opts: Record<string, PredictionPoolOption> = {};
+      for (const [optKey, optVal] of poolMap) {
+        opts[optKey] = optVal;
+      }
+      predPools[m.id] = opts;
+    })
+  );
 
   const odds = calculateOdds(pool, null);
 
@@ -59,8 +76,16 @@ export default async function MarketPage({ params }: Props) {
           <MarketHeader match={match} odds={odds} />
 
           {/* Trading panel — mobile only (shown above chart) */}
-          <div className="md:hidden">
+          <div className="md:hidden space-y-4">
             <TradingPanel match={match} odds={odds} balance={balance} />
+            {predMarkets.map((pm) => (
+              <PredictionMarketCard
+                key={pm.id}
+                market={pm}
+                pools={predPools[pm.id] ?? {}}
+                balance={balance}
+              />
+            ))}
           </div>
 
           <MarketChart
@@ -95,6 +120,14 @@ export default async function MarketPage({ params }: Props) {
             odds={odds}
             balance={balance}
           />
+          {predMarkets.map((pm) => (
+            <PredictionMarketCard
+              key={pm.id}
+              market={pm}
+              pools={predPools[pm.id] ?? {}}
+              balance={balance}
+            />
+          ))}
           <RelatedMarkets markets={relatedWithOdds} />
         </div>
       </div>

@@ -1,5 +1,8 @@
 -- Update leaderboard view to include team_number
-create or replace view public.leaderboard_view as
+-- Must drop + recreate because adding a column in the middle isn't allowed with CREATE OR REPLACE
+drop view if exists public.leaderboard_view;
+
+create view public.leaderboard_view as
 select
   p.id          as user_id,
   p.display_name,

@@ -28,12 +28,12 @@ async function ensureWelcomeBonus(userId: string) {
 
     if (existing && existing.length > 0) return; // Already has bonus
 
-    // Grant 1000 AF4
+    // Grant 10000 AF4
     await service.from("transactions").insert({
       type: "award",
-      amount: 1000,
+      amount: 10000,
       to_user_id: userId,
-      reason: "Welcome bonus — 1,000 AF4 to get started",
+      reason: "Welcome bonus — 10,000 AF4 to get started",
       category: "bonus",
     });
 
@@ -41,7 +41,7 @@ async function ensureWelcomeBonus(userId: string) {
     await service.from("notifications").insert({
       user_id: userId,
       type: "welcome",
-      message: "Welcome to Alt-F4 Bucks! You've been given $1,000 AF4 to start trading.",
+      message: "Welcome to Alt-F4 Bucks! You've been given $10,000 AF4 to start trading.",
       meta: {},
     });
   } catch {

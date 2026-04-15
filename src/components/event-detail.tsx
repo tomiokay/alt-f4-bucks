@@ -6,6 +6,7 @@ import { BetSlip } from "@/components/bet-slip";
 import { calculateOdds } from "@/lib/odds";
 import { cn } from "@/lib/utils";
 import { PredictionMarketCard } from "@/components/prediction-market-card";
+import { RankingPredictionPanel } from "@/components/ranking-prediction-panel";
 import type { MatchCache, PoolSummary, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 import type { TBARanking, TBAAlliance } from "@/lib/tba";
 
@@ -523,14 +524,23 @@ function PredictionsTab({
             Open Markets ({openMarkets.length})
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {openMarkets.map((m) => (
-              <PredictionMarketCard
-                key={m.id}
-                market={m}
-                pools={pools[m.id] ?? {}}
-                balance={balance}
-              />
-            ))}
+            {openMarkets.map((m) =>
+              m.type === "ranking_position" ? (
+                <RankingPredictionPanel
+                  key={m.id}
+                  market={m}
+                  pools={pools[m.id] ?? {}}
+                  balance={balance}
+                />
+              ) : (
+                <PredictionMarketCard
+                  key={m.id}
+                  market={m}
+                  pools={pools[m.id] ?? {}}
+                  balance={balance}
+                />
+              )
+            )}
           </div>
         </div>
       )}
@@ -542,14 +552,23 @@ function PredictionsTab({
             Resolved ({resolvedMarkets.length})
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {resolvedMarkets.map((m) => (
-              <PredictionMarketCard
-                key={m.id}
-                market={m}
-                pools={pools[m.id] ?? {}}
-                balance={balance}
-              />
-            ))}
+            {resolvedMarkets.map((m) =>
+              m.type === "ranking_position" ? (
+                <RankingPredictionPanel
+                  key={m.id}
+                  market={m}
+                  pools={pools[m.id] ?? {}}
+                  balance={balance}
+                />
+              ) : (
+                <PredictionMarketCard
+                  key={m.id}
+                  market={m}
+                  pools={pools[m.id] ?? {}}
+                  balance={balance}
+                />
+              )
+            )}
           </div>
         </div>
       )}

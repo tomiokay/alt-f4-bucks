@@ -74,12 +74,12 @@ export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 
           <form
             action="/betting"
             method="GET"
-            className="relative flex-1 max-w-[320px] hidden md:block"
+            className="relative flex-1 max-w-[320px]"
           >
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#484f58]" />
             <input
               name="q"
-              placeholder="Search markets..."
+              placeholder="Search teams, events..."
               className="w-full h-8 rounded-lg bg-[#161b22] border border-[#21262d] pl-9 pr-3 text-[13px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none transition-colors"
             />
           </form>

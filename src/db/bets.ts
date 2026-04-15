@@ -94,7 +94,6 @@ export async function getMatchByKey(matchKey: string): Promise<MatchCache | null
 
 export async function getActiveEventKeys(): Promise<string[]> {
   const supabase = await createClient();
-  // Supabase defaults to 1000 rows — fetch up to 10000 to get all events
   const { data } = await supabase
     .from("match_cache")
     .select("event_key")
@@ -106,20 +105,64 @@ export async function getActiveEventKeys(): Promise<string[]> {
 
 // --- Search matches ---
 
+// Common FRC abbreviations and expansions
+const SEARCH_ALIASES: Record<string, string[]> = {
+  "quals": ["qm"],
+  "qual": ["qm"],
+  "semis": ["sf"],
+  "semi": ["sf"],
+  "finals": ["f"],
+  "final": ["f"],
+  "elims": ["sf", "f"],
+  "playoffs": ["sf", "f"],
+  "champs": ["championship"],
+  "worlds": ["championship"],
+  "dcmp": ["district championship"],
+  "regionals": ["regional"],
+};
+
 export async function searchMatches(query: string, limit = 100): Promise<MatchCache[]> {
   const supabase = await createClient();
-  // Search by event name or match key
-  const { data } = await supabase
-    .from("match_cache")
-    .select("*")
-    .or(`event_name.ilike.%${query}%,match_key.ilike.%${query}%`)
-    .order("scheduled_time", { ascending: true })
-    .limit(limit);
+  const q = query.toLowerCase().trim();
 
-  // Also search by team number in arrays (can't do array contains via REST easily, do client-side)
-  const results = (data ?? []) as MatchCache[];
+  // Expand aliases
+  const aliases = SEARCH_ALIASES[q] ?? [];
 
-  // If no results from name/key, try team number search
+  // Build search terms: original query + any aliases
+  const searchTerms = [q, ...aliases];
+
+  // Search by event name or match key for each term
+  let results: MatchCache[] = [];
+
+  for (const term of searchTerms) {
+    const { data } = await supabase
+      .from("match_cache")
+      .select("*")
+      .or(`event_name.ilike.%${term}%,match_key.ilike.%${term}%`)
+      .order("scheduled_time", { ascending: true })
+      .limit(limit);
+
+    if (data && data.length > 0) {
+      results.push(...(data as MatchCache[]));
+    }
+  }
+
+  // Also try comp_level filter if query matches
+  if (["qm", "sf", "f"].includes(q) || aliases.some(a => ["qm", "sf", "f"].includes(a))) {
+    const compLevels = aliases.length > 0 ? aliases.filter(a => ["qm", "sf", "f"].includes(a)) : [q];
+    for (const cl of compLevels) {
+      const { data } = await supabase
+        .from("match_cache")
+        .select("*")
+        .eq("comp_level", cl)
+        .order("scheduled_time", { ascending: true })
+        .limit(limit);
+
+      if (data) results.push(...(data as MatchCache[]));
+    }
+  }
+
+  // If still no results, try team number search
   if (results.length === 0) {
     const { data: allData } = await supabase
       .from("match_cache")
@@ -127,13 +170,19 @@ export async function searchMatches(query: string, limit = 100): Promise<MatchCa
       .order("scheduled_time", { ascending: true })
       .limit(10000);
 
-    return ((allData ?? []) as MatchCache[]).filter((m) =>
-      m.red_teams.some((t) => t.includes(query)) ||
-      m.blue_teams.some((t) => t.includes(query))
+    results = ((allData ?? []) as MatchCache[]).filter((m) =>
+      m.red_teams.some((t) => t.includes(q)) ||
+      m.blue_teams.some((t) => t.includes(q))
     ).slice(0, limit);
   }
 
-  return results;
+  // Deduplicate by match_key
+  const seen = new Set<string>();
+  return results.filter((m) => {
+    if (seen.has(m.match_key)) return false;
+    seen.add(m.match_key);
+    return true;
+  }).slice(0, limit);
 }
 
 // --- Related matches (same event, excluding current) ---
@@ -167,7 +216,6 @@ export async function getMatchComments(matchKey: string): Promise<CommentWithPro
 
   const all = (data ?? []) as CommentWithProfile[];
 
-  // Build threaded structure
   const topLevel: CommentWithProfile[] = [];
   const byParent = new Map<string, CommentWithProfile[]>();
 

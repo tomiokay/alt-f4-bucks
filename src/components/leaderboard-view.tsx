@@ -4,11 +4,20 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/lib/types";
 
-type Props = {
-  entries: LeaderboardEntry[];
+type BigWin = {
+  display_name: string;
+  match_key: string;
+  amount: number;
+  payout: number;
+  profit: number;
 };
 
-export function LeaderboardView({ entries }: Props) {
+type Props = {
+  entries: LeaderboardEntry[];
+  biggestWins?: BigWin[];
+};
+
+export function LeaderboardView({ entries, biggestWins = [] }: Props) {
   const [timeTab, setTimeTab] = useState<"weekly" | "monthly" | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -126,32 +135,41 @@ export function LeaderboardView({ entries }: Props) {
         {/* Right sidebar: Biggest wins */}
         <div className="hidden lg:block w-[280px] shrink-0">
           <div className="rounded-xl bg-[#161b22] p-4">
-            <h3 className="text-[13px] font-semibold text-[#e6edf3] mb-3">Top portfolios</h3>
-            <div className="space-y-3">
-              {topWinners.map((entry, i) => {
-                const initials = entry.display_name
-                  ?.split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
+            <h3 className="text-[13px] font-semibold text-[#e6edf3] mb-3">Biggest wins this week</h3>
+            {biggestWins.length === 0 ? (
+              <p className="text-[12px] text-[#484f58] text-center py-4">No wins this week yet</p>
+            ) : (
+              <div className="space-y-3">
+                {biggestWins.map((win, i) => {
+                  const initials = win.display_name
+                    ?.split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase();
 
-                return (
-                  <div key={entry.user_id} className="flex items-center gap-2.5">
-                    <span className="text-[11px] text-[#484f58] tabular-nums w-4">{i + 1}</span>
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-[8px] font-bold shrink-0">
-                      {initials}
+                  return (
+                    <div key={`${win.match_key}-${i}`} className="flex items-start gap-2.5">
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-[8px] font-bold shrink-0 mt-0.5">
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[12px] text-[#e6edf3] block truncate">{win.display_name}</span>
+                        <span className="text-[10px] text-[#484f58] truncate block">{win.match_key}</span>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-[12px] text-[#22c55e] tabular-nums font-mono font-medium block">
+                          +${win.profit.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-[#484f58]">
+                          ${win.amount.toLocaleString()} bet
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[12px] text-[#e6edf3] truncate block">{entry.display_name}</span>
-                    </div>
-                    <span className="text-[12px] text-[#22c55e] tabular-nums font-mono font-medium shrink-0">
-                      ${entry.balance.toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

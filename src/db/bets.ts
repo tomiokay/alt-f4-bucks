@@ -188,6 +188,38 @@ export async function getMatchComments(matchKey: string): Promise<CommentWithPro
   return topLevel;
 }
 
+// --- Biggest Wins ---
+
+export async function getBiggestWinsThisWeek(limit = 8): Promise<{ display_name: string; match_key: string; amount: number; payout: number; profit: number }[]> {
+  const supabase = await createClient();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data } = await supabase
+    .from("pool_bets")
+    .select(`
+      match_key,
+      amount,
+      payout,
+      user:profiles!pool_bets_user_id_fkey(display_name)
+    `)
+    .not("payout", "is", null)
+    .gt("payout", 0)
+    .gte("created_at", weekAgo)
+    .order("payout", { ascending: false })
+    .limit(limit);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[])
+    .filter((d) => d.payout > d.amount)
+    .map((d) => ({
+      display_name: d.user?.display_name ?? d.user?.[0]?.display_name ?? "Anonymous",
+      match_key: d.match_key,
+      amount: d.amount,
+      payout: d.payout,
+      profit: d.payout - d.amount,
+    }));
+}
+
 // --- Odds History ---
 
 export async function getOddsHistory(matchKey: string): Promise<OddsHistoryPoint[]> {

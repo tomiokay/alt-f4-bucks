@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { login, signup } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
+import { HowItWorksButton } from "@/components/how-it-works";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -40,8 +41,11 @@ export default function LoginPage() {
             Alt-F4 Bucks
           </h1>
           <p className="text-[13px] text-[#7d8590] mt-1">
-            FRC Team 7558 prediction market
+            FRC prediction market
           </p>
+          <div className="mt-2">
+            <HowItWorksButton />
+          </div>
         </div>
 
         <div className="rounded-xl bg-[#161b22] overflow-hidden">

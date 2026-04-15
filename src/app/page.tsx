@@ -11,6 +11,7 @@ import { BreakingNews } from "@/components/home/breaking-news";
 import { HotTopics } from "@/components/home/hot-topics";
 import { AllMarkets } from "@/components/home/all-markets";
 import { AutoSync } from "@/components/auto-sync";
+import { HowItWorksButton } from "@/components/how-it-works";
 import type { MatchCache, PoolSummary, MatchOdds } from "@/lib/types";
 
 export const revalidate = 30;
@@ -106,6 +107,10 @@ export default async function HomePage() {
   return (
     <div className="space-y-0">
       <AutoSync />
+      {/* How it works link */}
+      <div className="flex justify-end mb-3">
+        <HowItWorksButton />
+      </div>
       <div className="flex gap-6">
         <div className="flex-1 min-w-0 space-y-6">
           {featured && (

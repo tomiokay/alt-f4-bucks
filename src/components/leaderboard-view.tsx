@@ -124,15 +124,18 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
 
                     <span className={cn(
                       "text-right text-[14px] tabular-nums font-mono font-medium",
-                      entry.balance > 1000 ? "text-[#22c55e]" : entry.balance < 1000 ? "text-[#ef4444]" : "text-[#e6edf3]"
+                      entry.balance > 10000 ? "text-[#22c55e]" : entry.balance < 10000 ? "text-[#ef4444]" : "text-[#e6edf3]"
                     )}>
                       ${entry.balance.toLocaleString()}
                     </span>
 
-                    <span className="text-right text-[14px] text-[#7d8590] tabular-nums font-mono hidden sm:block">
-                      {entry.balance >= 1000
-                        ? `+$${(entry.balance - 1000).toLocaleString()}`
-                        : `-$${(1000 - entry.balance).toLocaleString()}`
+                    <span className={cn(
+                      "text-right text-[14px] tabular-nums font-mono hidden sm:block",
+                      entry.balance > 10000 ? "text-[#22c55e]" : entry.balance < 10000 ? "text-[#ef4444]" : "text-[#7d8590]"
+                    )}>
+                      {entry.balance >= 10000
+                        ? `+$${(entry.balance - 10000).toLocaleString()}`
+                        : `-$${(10000 - entry.balance).toLocaleString()}`
                       }
                     </span>
                   </Link>

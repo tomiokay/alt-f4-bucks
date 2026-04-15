@@ -86,6 +86,8 @@ export default async function MarketPage({ params }: Props) {
                   market={pm}
                   pools={predPools[pm.id] ?? {}}
                   balance={balance}
+                  redTeams={match.red_teams}
+                  blueTeams={match.blue_teams}
                 />
               ) : (
                 <PredictionMarketCard

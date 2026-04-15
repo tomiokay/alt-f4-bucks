@@ -188,8 +188,9 @@ export async function ensureEventMarkets(
   }
 
   // 3. Per-rank prediction markets (Ranks 1-8)
-  const qualMatches = matches.filter((m) => m.comp_level === "qm" && !m.is_complete);
-  if (rankings.length > 0 && qualMatches.length > 0) {
+  // Create as soon as we have qual matches, regardless of completion status
+  const allQualMatches = matches.filter((m) => m.comp_level === "qm");
+  if (rankings.length > 0 && allQualMatches.length > 0) {
     const allTeams = rankings.map((r) => ({
       key: r.team_key,
       label: `Team ${r.team_key.replace("frc", "")}`,

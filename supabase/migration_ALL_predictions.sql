@@ -55,6 +55,9 @@ alter table public.prediction_bets
 alter table public.prediction_bets
   add column if not exists predicted_blue numeric;
 
+alter table public.prediction_bets
+  add column if not exists early_multiplier numeric not null default 1.0;
+
 -- =============================================================
 -- 2. CONSTRAINTS — drop old, add current
 -- =============================================================
@@ -150,10 +153,14 @@ language plpgsql
 security definer
 as $$
 declare
-  v_market  public.prediction_markets%rowtype;
-  v_balance int;
-  v_bet_id  uuid;
-  v_valid   boolean;
+  v_market        public.prediction_markets%rowtype;
+  v_balance       int;
+  v_bet_id        uuid;
+  v_valid         boolean;
+  v_qual_total    int := 0;
+  v_qual_played   int := 0;
+  v_fraction      numeric := 0;
+  v_multiplier    numeric := 1.0;
 begin
   if p_amount < 1 then
     raise exception 'Bet must be at least 1 Buck';
@@ -170,6 +177,25 @@ begin
 
   if v_market.status != 'open' then
     raise exception 'Market is closed';
+  end if;
+
+  -- For ranking_position markets: enforce early-prediction lock + compute multiplier
+  if v_market.type = 'ranking_position' then
+    select
+      count(*) filter (where comp_level = 'qm'),
+      count(*) filter (where comp_level = 'qm' and is_complete = true)
+    into v_qual_total, v_qual_played
+    from public.match_cache
+    where event_key = v_market.event_key;
+
+    if v_qual_total > 0 then
+      v_fraction := v_qual_played::numeric / v_qual_total::numeric;
+      if v_fraction >= 0.9 then
+        raise exception 'Rankings locked — qual rankings are finalized, no more bets accepted';
+      end if;
+      -- Multiplier: 2.0x at 0%% done, 1.0x at 90%% done (linear)
+      v_multiplier := greatest(1.0, round(2.0 - v_fraction / 0.9, 2));
+    end if;
   end if;
 
   select exists(
@@ -194,15 +220,20 @@ begin
     raise exception 'Insufficient balance. You have % but need %', v_balance, p_amount;
   end if;
 
-  insert into public.prediction_bets (user_id, market_id, option_key, amount)
-  values (p_user_id, p_market_id, p_option, p_amount)
+  insert into public.prediction_bets (user_id, market_id, option_key, amount, early_multiplier)
+  values (p_user_id, p_market_id, p_option, p_amount, v_multiplier)
   returning id into v_bet_id;
 
   insert into public.transactions (type, amount, to_user_id, by_user_id, reason, category, meta)
   values (
     'adjustment', -p_amount, p_user_id, p_user_id,
     'Prediction bet — ' || v_market.title, 'prediction_escrow',
-    jsonb_build_object('prediction_bet_id', v_bet_id, 'market_id', p_market_id, 'option', p_option)
+    jsonb_build_object(
+      'prediction_bet_id', v_bet_id,
+      'market_id', p_market_id,
+      'option', p_option,
+      'multiplier', v_multiplier
+    )
   );
 
   return v_bet_id;
@@ -221,15 +252,16 @@ language plpgsql
 security definer
 as $$
 declare
-  v_market        public.prediction_markets%rowtype;
-  v_total_pool    int;
-  v_winning_pool  int;
-  v_bet           record;
-  v_payout        int;
-  v_resolved      int := 0;
-  v_payout_sum    int := 0;
-  v_remainder     int;
-  v_largest_bet_id uuid;
+  v_market            public.prediction_markets%rowtype;
+  v_total_pool        int;
+  v_winning_weighted  numeric;  -- sum(amount * early_multiplier) for correct bettors
+  v_bet               record;
+  v_payout            int;
+  v_resolved          int := 0;
+  v_payout_sum        int := 0;
+  v_remainder         int;
+  v_largest_bet_id    uuid;
+  v_largest_weighted  numeric := 0;
 begin
   select * into v_market from public.prediction_markets where id = p_market_id for update;
   if not found then raise exception 'Market not found'; end if;
@@ -243,10 +275,13 @@ begin
     return 0;
   end if;
 
-  select coalesce(sum(amount), 0) into v_winning_pool
-  from public.prediction_bets where market_id = p_market_id and option_key = p_correct_option and payout is null;
+  -- Sum of (amount * early_multiplier) for correct-side bettors — determines payout share
+  select coalesce(sum(amount::numeric * coalesce(early_multiplier, 1.0)), 0) into v_winning_weighted
+  from public.prediction_bets
+  where market_id = p_market_id and option_key = p_correct_option and payout is null;
 
-  if v_winning_pool = 0 then
+  if v_winning_weighted = 0 then
+    -- No correct bets — refund everyone
     for v_bet in select * from public.prediction_bets where market_id = p_market_id and payout is null loop
       update public.prediction_bets set payout = v_bet.amount where id = v_bet.id;
       insert into public.transactions (type, amount, to_user_id, by_user_id, reason, category, meta)
@@ -259,17 +294,26 @@ begin
     return v_resolved;
   end if;
 
+  -- Distribute payouts: correct bettors share pool weighted by amount * early_multiplier
   v_largest_bet_id := null;
-  for v_bet in select * from public.prediction_bets where market_id = p_market_id and payout is null order by amount desc loop
+  for v_bet in select * from public.prediction_bets where market_id = p_market_id and payout is null
+               order by (amount::numeric * coalesce(early_multiplier, 1.0)) desc loop
     if v_bet.option_key = p_correct_option then
-      v_payout := floor(v_bet.amount::numeric * v_total_pool / v_winning_pool);
+      v_payout := floor(v_bet.amount::numeric * coalesce(v_bet.early_multiplier, 1.0) * v_total_pool / v_winning_weighted);
       v_payout_sum := v_payout_sum + v_payout;
-      if v_largest_bet_id is null then v_largest_bet_id := v_bet.id; end if;
+      if (v_bet.amount::numeric * coalesce(v_bet.early_multiplier, 1.0)) > v_largest_weighted then
+        v_largest_weighted := v_bet.amount::numeric * coalesce(v_bet.early_multiplier, 1.0);
+        v_largest_bet_id := v_bet.id;
+      end if;
       update public.prediction_bets set payout = v_payout where id = v_bet.id;
       insert into public.transactions (type, amount, to_user_id, by_user_id, reason, category, meta)
       values ('adjustment', v_payout, v_bet.user_id, v_bet.user_id,
         'Prediction won — ' || v_market.title, 'prediction_won',
-        jsonb_build_object('prediction_bet_id', v_bet.id, 'market_id', p_market_id));
+        jsonb_build_object(
+          'prediction_bet_id', v_bet.id,
+          'market_id', p_market_id,
+          'early_multiplier', v_bet.early_multiplier
+        ));
     else
       update public.prediction_bets set payout = 0 where id = v_bet.id;
     end if;

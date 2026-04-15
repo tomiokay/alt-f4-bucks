@@ -21,6 +21,8 @@ type Props = {
   alliances?: TBAAlliance[];
   predictionMarkets?: PredictionMarket[];
   predictionPools?: Record<string, Record<string, PredictionPoolOption>>;
+  qualPlayed?: number;
+  qualTotal?: number;
 };
 
 function stripFrc(key: string) {
@@ -464,10 +466,14 @@ function PredictionsTab({
   markets,
   pools,
   balance,
+  qualPlayed,
+  qualTotal,
 }: {
   markets: PredictionMarket[];
   pools: Record<string, Record<string, PredictionPoolOption>>;
   balance: number;
+  qualPlayed: number;
+  qualTotal: number;
 }) {
   const [filter, setFilter] = useState<"all" | "score" | "event" | "ranking">("all");
 
@@ -531,6 +537,8 @@ function PredictionsTab({
                   market={m}
                   pools={pools[m.id] ?? {}}
                   balance={balance}
+                  qualPlayed={qualPlayed}
+                  qualTotal={qualTotal}
                 />
               ) : (
                 <PredictionMarketCard
@@ -559,6 +567,8 @@ function PredictionsTab({
                   market={m}
                   pools={pools[m.id] ?? {}}
                   balance={balance}
+                  qualPlayed={qualPlayed}
+                  qualTotal={qualTotal}
                 />
               ) : (
                 <PredictionMarketCard
@@ -589,6 +599,8 @@ export function EventDetail({
   alliances = [],
   predictionMarkets = [],
   predictionPools = {},
+  qualPlayed = 0,
+  qualTotal = 0,
 }: Props) {
   const [tab, setTab] = useState<"matches" | "predictions" | "rankings" | "playoffs">("matches");
 
@@ -671,6 +683,8 @@ export function EventDetail({
           markets={predictionMarkets}
           pools={predictionPools}
           balance={balance}
+          qualPlayed={qualPlayed}
+          qualTotal={qualTotal}
         />
       )}
       {tab === "rankings" && <RankingsTab rankings={rankings} />}

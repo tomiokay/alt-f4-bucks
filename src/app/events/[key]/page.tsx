@@ -42,9 +42,11 @@ export default async function EventPage({ params }: Props) {
     fullPredictions[k] = { redPredScore: v.redPredScore, bluePredScore: v.bluePredScore };
   }
 
-  // Auto-create/update prediction markets (fire-and-forget, don't block render)
-  ensureEventMarkets(key, matches, fullPredictions, rankings, alliances).catch(() => {});
-  resolveScoreMarkets(key).catch(() => {});
+  // Ensure markets exist before fetching (must await so they appear on first load)
+  await Promise.allSettled([
+    ensureEventMarkets(key, matches, fullPredictions, rankings, alliances),
+    resolveScoreMarkets(key),
+  ]);
 
   // Fetch prediction markets and pools
   const [predictionMarkets, predPoolsMap] = await Promise.all([
@@ -63,6 +65,8 @@ export default async function EventPage({ params }: Props) {
   }
 
   const eventName = matches[0].event_name;
+  const qualTotal = matches.filter((m) => m.comp_level === "qm").length;
+  const qualPlayed = matches.filter((m) => m.comp_level === "qm" && m.is_complete).length;
 
   return (
     <div>
@@ -78,6 +82,8 @@ export default async function EventPage({ params }: Props) {
         alliances={alliances}
         predictionMarkets={predictionMarkets}
         predictionPools={predictionPools}
+        qualPlayed={qualPlayed}
+        qualTotal={qualTotal}
       />
     </div>
   );

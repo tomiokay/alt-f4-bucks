@@ -9,10 +9,13 @@ type Props = {
   market: PredictionMarket;
   pools: Record<string, PredictionPoolOption>;
   balance: number;
+  redTeams?: string[];
+  blueTeams?: string[];
 };
 
-export function ScorePredictionPanel({ market, pools, balance }: Props) {
-  const [score, setScore] = useState(market.line ? String(Math.round(market.line)) : "");
+export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTeams }: Props) {
+  const [redScore, setRedScore] = useState("");
+  const [blueScore, setBlueScore] = useState("");
   const [amount, setAmount] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -24,15 +27,17 @@ export function ScorePredictionPanel({ market, pools, balance }: Props) {
   const isResolved = market.status === "resolved";
   const isClosed = market.status !== "open";
   const canAfford = balance >= amount && amount >= 1;
+  const hasScores = redScore !== "" && blueScore !== "" && parseInt(redScore) >= 0 && parseInt(blueScore) >= 0;
 
   function handleSubmit() {
-    if (!score || parseInt(score) < 0) return;
+    if (!hasScores) return;
     setError(null);
     setSuccess(false);
 
     const fd = new FormData();
     fd.set("marketId", market.id);
-    fd.set("predictedScore", score);
+    fd.set("predictedRed", redScore);
+    fd.set("predictedBlue", blueScore);
     fd.set("amount", String(amount));
 
     startTransition(async () => {
@@ -58,11 +63,6 @@ export function ScorePredictionPanel({ market, pools, balance }: Props) {
           </div>
           <span className="text-[13px] font-medium text-[#e6edf3]">Predict the Score</span>
         </div>
-        {isResolved && market.actual_value !== null && (
-          <span className="text-[12px] text-[#22c55e] font-semibold">
-            Actual: {market.actual_value}
-          </span>
-        )}
         {!isClosed && totalPool > 0 && (
           <span className="text-[11px] text-[#484f58]">${totalPool} pool</span>
         )}
@@ -72,31 +72,51 @@ export function ScorePredictionPanel({ market, pools, balance }: Props) {
         {isClosed ? (
           <div className="text-center py-3">
             <p className="text-[13px] text-[#484f58]">
-              {isResolved
-                ? `Final score: ${market.actual_value}`
-                : "Market closed"}
+              {isResolved ? "Market resolved" : "Market closed"}
             </p>
           </div>
         ) : (
           <>
-            {/* Score input */}
-            <div>
-              <label className="text-[12px] text-[#7d8590] mb-1.5 block">
-                Your predicted total score
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={score}
-                onChange={(e) => setScore(e.target.value)}
-                placeholder={market.line ? `Statbotics: ~${Math.round(market.line)}` : "e.g. 150"}
-                className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[18px] text-[#e6edf3] font-mono font-bold text-center focus:border-[#388bfd] focus:outline-none tabular-nums"
-              />
-              {market.line && (
-                <p className="text-[10px] text-[#484f58] mt-1 text-center">
-                  Statbotics predicts ~{Math.round(market.line)}
-                </p>
-              )}
+            {/* Red + Blue score inputs side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="flex items-center gap-1.5 text-[12px] text-[#7d8590] mb-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
+                  Red Score
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={redScore}
+                  onChange={(e) => setRedScore(e.target.value)}
+                  placeholder="0"
+                  className="w-full h-11 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[20px] text-[#ef4444] font-mono font-bold text-center focus:border-[#ef4444] focus:outline-none tabular-nums"
+                />
+                {redTeams && (
+                  <p className="text-[9px] text-[#484f58] mt-1 text-center truncate">
+                    {redTeams.join(" · ")}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-[12px] text-[#7d8590] mb-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
+                  Blue Score
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={blueScore}
+                  onChange={(e) => setBlueScore(e.target.value)}
+                  placeholder="0"
+                  className="w-full h-11 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[20px] text-[#3b82f6] font-mono font-bold text-center focus:border-[#3b82f6] focus:outline-none tabular-nums"
+                />
+                {blueTeams && (
+                  <p className="text-[9px] text-[#484f58] mt-1 text-center truncate">
+                    {blueTeams.join(" · ")}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Amount */}
@@ -138,7 +158,7 @@ export function ScorePredictionPanel({ market, pools, balance }: Props) {
 
             {/* Info */}
             <div className="text-[11px] text-[#484f58] space-y-1 pt-1 border-t border-[#21262d]">
-              <p>Closer your prediction is to the actual score, the bigger your payout.</p>
+              <p>Closer your prediction to the real score, the bigger your payout.</p>
               {totalBettors > 0 && (
                 <p>{totalBettors} prediction{totalBettors !== 1 ? "s" : ""} placed</p>
               )}
@@ -149,15 +169,19 @@ export function ScorePredictionPanel({ market, pools, balance }: Props) {
 
             <button
               onClick={handleSubmit}
-              disabled={isPending || !canAfford || !score || parseInt(score) < 0}
+              disabled={isPending || !canAfford || !hasScores}
               className={cn(
                 "w-full rounded-lg py-2.5 text-[14px] font-semibold transition-colors",
-                canAfford && score && !isPending
+                canAfford && hasScores && !isPending
                   ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600"
                   : "bg-[#21262d] text-[#484f58] cursor-not-allowed"
               )}
             >
-              {isPending ? "Placing..." : `Predict ${score || "..."} points`}
+              {isPending
+                ? "Placing..."
+                : hasScores
+                ? `Predict ${redScore} - ${blueScore}`
+                : "Enter both scores"}
             </button>
           </>
         )}

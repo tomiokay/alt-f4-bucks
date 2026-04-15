@@ -9,9 +9,11 @@ type Props = {
   market: PredictionMarket;
   pools: Record<string, PredictionPoolOption>;
   balance: number;
+  qualPlayed?: number;
+  qualTotal?: number;
 };
 
-export function RankingPredictionPanel({ market, pools, balance }: Props) {
+export function RankingPredictionPanel({ market, pools, balance, qualPlayed = 0, qualTotal = 0 }: Props) {
   const [query, setQuery] = useState("");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [amount, setAmount] = useState(10);
@@ -25,6 +27,14 @@ export function RankingPredictionPanel({ market, pools, balance }: Props) {
 
   const isResolved = market.status === "resolved";
   const isClosed = market.status !== "open";
+
+  // Early-prediction multiplier: 2.0x at 0% done → 1.0x at 90% done → locked at 90%+
+  const fraction = qualTotal > 0 ? qualPlayed / qualTotal : 0;
+  const isLocked = fraction >= 0.9;
+  const multiplier = qualTotal > 0 && !isLocked
+    ? Math.max(1.0, parseFloat((2.0 - fraction / 0.9).toFixed(2)))
+    : 1.0;
+  const pctDone = qualTotal > 0 ? Math.round(fraction * 100) : 0;
 
   // Sort by pool size descending so the favourites show first
   const sortedOptions = [...market.options].sort((a, b) => {
@@ -270,12 +280,46 @@ export function RankingPredictionPanel({ market, pools, balance }: Props) {
               </div>
             </div>
 
+            {/* Early multiplier banner */}
+            {qualTotal > 0 && (
+              <div className={cn(
+                "rounded-lg px-3 py-2 border text-[11px]",
+                isLocked
+                  ? "bg-[#ef4444]/5 border-[#ef4444]/20 text-[#ef4444]"
+                  : multiplier >= 1.5
+                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                  : "bg-[#21262d] border-[#30363d] text-[#7d8590]"
+              )}>
+                {isLocked ? (
+                  <span className="font-semibold">Locked — quals are 90%+ complete, no more bets</span>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span>Early prediction bonus</span>
+                    <span className="font-bold tabular-nums">
+                      {multiplier.toFixed(2)}x payout weight
+                    </span>
+                  </div>
+                )}
+                {!isLocked && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex-1 h-1 rounded-full bg-[#21262d] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-yellow-500/50 transition-all"
+                        style={{ width: `${pctDone}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-[#484f58]">{pctDone}% of quals done</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Payout info */}
             <div className="text-[11px] text-[#484f58] space-y-1 pt-1 border-t border-[#21262d]">
-              <p>Correct pick splits the full pool. Wrong pick loses your wager.</p>
+              <p>Correct pick splits the pool weighted by bet × multiplier. Wrong = lose wager.</p>
               {selectedOption && (
                 <div className="flex items-center justify-between">
-                  <span>If correct, payout</span>
+                  <span>If correct, estimated payout</span>
                   <span className="text-[#22c55e] font-mono font-semibold tabular-nums">
                     ${getPotentialPayout(selectedOption, amount).toLocaleString()}
                   </span>
@@ -288,16 +332,18 @@ export function RankingPredictionPanel({ market, pools, balance }: Props) {
 
             <button
               onClick={handleSubmit}
-              disabled={isPending || !selectedOption || !canAfford}
+              disabled={isPending || !selectedOption || !canAfford || isLocked}
               className={cn(
                 "w-full rounded-lg py-2.5 text-[14px] font-semibold transition-colors",
-                selectedOption && canAfford && !isPending
+                selectedOption && canAfford && !isPending && !isLocked
                   ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
                   : "bg-[#21262d] text-[#484f58] cursor-not-allowed"
               )}
             >
               {isPending
                 ? "Placing..."
+                : isLocked
+                ? "Market locked"
                 : selectedOption
                 ? `Bet on ${selectedLabel}`
                 : "Pick a team"}

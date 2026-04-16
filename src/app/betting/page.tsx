@@ -64,16 +64,17 @@ async function BettingContent({ userId, query, q }: { userId: string; query: str
   if (query) {
     allMatches = await searchMatches(query.toLowerCase());
   } else {
-    // Single query for recent matches instead of per-event loop
-    const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+    // Fetch all non-complete matches + recently completed
     const results: MatchCache[] = [];
     let page = 0;
     const PAGE_SIZE = 1000;
-    while (page < 3) {
+
+    // Get upcoming/live matches (not complete)
+    while (true) {
       const { data } = await service
         .from("match_cache")
         .select("*")
-        .gte("scheduled_time", threeWeeksAgo)
+        .eq("is_complete", false)
         .order("scheduled_time", { ascending: true })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -82,6 +83,18 @@ async function BettingContent({ userId, query, q }: { userId: string; query: str
       if (data.length < PAGE_SIZE) break;
       page++;
     }
+
+    // Also get recently completed (last 2 weeks) for context
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentDone } = await service
+      .from("match_cache")
+      .select("*")
+      .eq("is_complete", true)
+      .gte("scheduled_time", twoWeeksAgo)
+      .order("scheduled_time", { ascending: false })
+      .range(0, 999);
+
+    if (recentDone) results.push(...(recentDone as MatchCache[]));
     allMatches = results;
   }
 

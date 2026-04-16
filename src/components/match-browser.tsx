@@ -21,12 +21,20 @@ export function MatchBrowser({ matches, pools, predictions, balance }: Props) {
   const [tab, setTab] = useState<"upcoming" | "completed">("upcoming");
 
   const now = new Date().toISOString();
-  const upcoming = matches.filter((m) =>
-    !m.is_complete && (!m.scheduled_time || m.scheduled_time > now)
-  );
-  const completed = matches.filter((m) =>
-    m.is_complete || (m.scheduled_time && m.scheduled_time < now)
-  );
+  const upcoming = matches
+    .filter((m) => !m.is_complete && (!m.scheduled_time || m.scheduled_time > now))
+    .sort((a, b) => {
+      const aTime = a.scheduled_time ?? "9999";
+      const bTime = b.scheduled_time ?? "9999";
+      return aTime.localeCompare(bTime);
+    });
+  const completed = matches
+    .filter((m) => m.is_complete || (m.scheduled_time && m.scheduled_time < now))
+    .sort((a, b) => {
+      const aTime = a.actual_time ?? a.scheduled_time ?? "";
+      const bTime = b.actual_time ?? b.scheduled_time ?? "";
+      return bTime.localeCompare(aTime);
+    });
 
   function openSlip(match: MatchCache, side: "red" | "blue") {
     setSelectedMatch(match);

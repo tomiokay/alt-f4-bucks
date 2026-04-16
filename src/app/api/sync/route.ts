@@ -160,11 +160,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Resolve prediction markets for completed matches
+  // Create score prediction markets for synced events + resolve completed ones
   let predResolved = 0;
   try {
-    const { resolveScoreMarkets } = await import("@/app/actions/predictions");
+    const { ensureScorePredictions, resolveScoreMarkets } = await import("@/app/actions/predictions");
     for (const eventKey of allKeys) {
+      await ensureScorePredictions(eventKey);
       predResolved += await resolveScoreMarkets(eventKey);
     }
   } catch {

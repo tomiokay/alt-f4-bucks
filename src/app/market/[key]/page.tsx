@@ -20,6 +20,7 @@ import { RelatedMarkets } from "@/components/market/related-markets";
 import { PredictionMarketCard } from "@/components/prediction-market-card";
 import { ScorePredictionPanel } from "@/components/score-prediction-panel";
 import { AutoSync } from "@/components/auto-sync";
+import { ensureScorePredictions } from "@/app/actions/predictions";
 import type { PredictionPoolOption } from "@/lib/types";
 
 type Props = {
@@ -35,6 +36,11 @@ export default async function MarketPage({ params }: Props) {
 
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+
+  // Ensure score prediction exists for this match
+  if (!match.is_complete) {
+    await ensureScorePredictions(match.event_key).catch(() => {});
+  }
 
   const [balance, pool, bets, comments, related, oddsHistory, predMarkets] = await Promise.all([
     getUserBalance(profile.id),

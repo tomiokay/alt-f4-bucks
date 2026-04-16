@@ -127,6 +127,39 @@ async function marketExists(
   return (data?.length ?? 0) > 0;
 }
 
+// Create score prediction markets for all upcoming matches in an event
+export async function ensureScorePredictions(eventKey: string) {
+  const service = await createServiceClient();
+
+  // Get upcoming matches for this event
+  const { data: matches } = await service
+    .from("match_cache")
+    .select("match_key, is_complete")
+    .eq("event_key", eventKey)
+    .eq("is_complete", false);
+
+  if (!matches || matches.length === 0) return 0;
+
+  let created = 0;
+  for (const match of matches) {
+    if (await marketExists(service, eventKey, match.match_key, "score_prediction")) continue;
+
+    const { error } = await service.from("prediction_markets").insert({
+      event_key: eventKey,
+      match_key: match.match_key,
+      type: "score_prediction",
+      title: `Predict the Score`,
+      description: `Predict the Red and Blue alliance scores. Closer to actual = bigger payout.`,
+      options: [{ key: "score", label: "Predict Red & Blue scores" }],
+      status: "open",
+    });
+
+    if (!error) created++;
+  }
+
+  return created;
+}
+
 // Auto-create prediction markets for an event
 export async function ensureEventMarkets(
   eventKey: string,

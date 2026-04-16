@@ -103,10 +103,15 @@ async function HomeContent() {
   const featured = topMarkets[0] ?? null;
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
 
-  const carouselPredMarkets = allPredMarkets.filter(
-    (m) => m.status === "open" && m.match_key === null &&
-    (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")
-  );
+  const carouselPredMarkets = allPredMarkets.filter((m) => {
+    if (m.status !== "open" || m.match_key !== null) return false;
+    if (m.type !== "event_winner" && m.type !== "ranking_top1" && m.type !== "ranking_position") return false;
+    // Only show in carousel if someone has bet on it
+    const marketPools = allPredPools[m.id];
+    if (!marketPools) return false;
+    const totalPool = Object.values(marketPools).reduce((sum, p) => sum + p.pool, 0);
+    return totalPool > 0;
+  });
 
   const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const recentCompleted = completed.filter((e) => {

@@ -12,21 +12,33 @@ export default async function EventsPage() {
 
   const service = await createServiceClient();
 
-  const [poolMap, favoriteKeys, tbaEvents, { data: allMatches }] = await Promise.all([
+  const [poolMap, favoriteKeys, tbaEvents] = await Promise.all([
     getAllPoolSummaries(),
     getUserFavoriteEvents(profile.id),
     getCurrentEvents(),
-    service
+  ]);
+
+  // Paginate to get ALL matches (Supabase caps at ~1000 per request)
+  let allMatches: { event_key: string; event_name: string; is_complete: boolean; scheduled_time: string | null }[] = [];
+  let page = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data } = await service
       .from("match_cache")
       .select("event_key, event_name, is_complete, scheduled_time")
-      .limit(50000),
-  ]);
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (!data || data.length === 0) break;
+    allMatches.push(...(data as typeof allMatches));
+    if (data.length < PAGE_SIZE) break;
+    page++;
+  }
 
   const favoriteSet = new Set(favoriteKeys);
 
   // Group by event and count
   const eventStats = new Map<string, { name: string; total: number; completed: number; earliest: string | null }>();
-  for (const m of (allMatches ?? []) as { event_key: string; event_name: string; is_complete: boolean; scheduled_time: string | null }[]) {
+  for (const m of allMatches) {
     const existing = eventStats.get(m.event_key);
     if (existing) {
       existing.total++;

@@ -18,9 +18,17 @@ type EventSummary = {
   isFavorite: boolean;
 };
 
+type UpcomingTbaEvent = {
+  key: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+};
+
 type Props = {
   events: EventSummary[];
   allEvents: EventSummary[];
+  upcomingTbaEvents?: UpcomingTbaEvent[];
 };
 
 function formatDate(time: string | null): string {
@@ -32,7 +40,7 @@ function formatDate(time: string | null): string {
   });
 }
 
-export function EventsList({ events, allEvents }: Props) {
+export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props) {
   const [filter, setFilter] = useState<"all" | "live" | "upcoming" | "completed" | "favorites">("all");
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -172,6 +180,36 @@ export function EventsList({ events, allEvents }: Props) {
               })}
             </div>
           )}
+
+      {/* Upcoming TBA events without match schedules */}
+      {(filter === "upcoming" || filter === "all") && upcomingTbaEvents.length > 0 && (
+        <div className="space-y-3 mt-6">
+          <h3 className="text-[14px] font-medium text-[#7d8590]">Coming Soon</h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {upcomingTbaEvents
+              .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.key.includes(search.toLowerCase()))
+              .map((event) => (
+                <div
+                  key={event.key}
+                  className="rounded-xl bg-[#161b22] p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-medium text-[#388bfd]">UPCOMING</span>
+                    <span className="text-[10px] text-[#484f58]">
+                      {formatDate(event.startDate)}
+                    </span>
+                  </div>
+                  <h3 className="text-[14px] font-medium text-[#e6edf3] leading-snug mb-3">
+                    {event.name}
+                  </h3>
+                  <p className="text-[11px] text-[#484f58]">
+                    No match schedule yet
+                  </p>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

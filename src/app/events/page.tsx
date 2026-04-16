@@ -1,7 +1,7 @@
 import { getCurrentProfile } from "@/db/profiles";
 import { redirect } from "next/navigation";
 import { getActiveEventKeys, getCachedMatches, getAllPoolSummaries } from "@/db/bets";
-// import { getAllSeasonEvents } from "@/lib/tba";
+import { getCurrentEvents } from "@/lib/tba";
 import { getUserFavoriteEvents } from "@/app/actions/favorites";
 import { EventsList } from "@/components/events-list";
 
@@ -9,10 +9,11 @@ export default async function EventsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [eventKeys, poolMap, favoriteKeys] = await Promise.all([
+  const [eventKeys, poolMap, favoriteKeys, tbaEvents] = await Promise.all([
     getActiveEventKeys(),
     getAllPoolSummaries(),
     getUserFavoriteEvents(profile.id),
+    getCurrentEvents(),
   ]);
 
   const favoriteSet = new Set(favoriteKeys);
@@ -76,6 +77,23 @@ export default async function EventsPage() {
     e.isFavorite || (e.startTime && e.startTime >= twoWeeksAgo) || e.upcomingMatches > 0
   );
 
+  // Find TBA events starting in the next 3 days that aren't synced
+  const syncedKeys = new Set(eventKeys);
+  const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const upcomingTbaEvents = tbaEvents
+    .filter((e) => {
+      if (syncedKeys.has(e.key)) return false;
+      const start = new Date(e.start_date);
+      return start >= now && start <= threeDaysFromNow;
+    })
+    .map((e) => ({
+      key: e.key,
+      name: e.name,
+      startDate: e.start_date,
+      endDate: e.end_date,
+    }));
+
   return (
     <div className="space-y-5">
       <div>
@@ -85,6 +103,7 @@ export default async function EventsPage() {
       <EventsList
         events={recentEvents}
         allEvents={eventSummaries}
+        upcomingTbaEvents={upcomingTbaEvents}
       />
     </div>
   );

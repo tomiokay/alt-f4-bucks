@@ -55,10 +55,11 @@ function formatDate(time: string | null): string {
 }
 
 function getStatus(e: EventSummary): "live" | "upcoming" | "completed" {
-  // Live = has matches AND not all completed
+  // Live = has match schedule AND not all completed
   if (e.totalMatches > 0 && e.upcomingMatches > 0) return "live";
   // Completed = has matches AND all done
   if (e.totalMatches > 0 && e.upcomingMatches === 0) return "completed";
+  // No matches = upcoming
   return "upcoming";
 }
 
@@ -99,6 +100,9 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
 
   const allDisplay = [...syncedDisplay, ...unsyncedDisplay];
 
+  // Completed: only show last 2 weeks
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
   const filtered = allDisplay.filter((e) => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.key.includes(search.toLowerCase())) {
       return false;
@@ -106,7 +110,17 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
     if (filter === "favorites") return favorites.has(e.key);
     if (filter === "live") return e.status === "live";
     if (filter === "upcoming") return e.status === "upcoming";
-    if (filter === "completed") return e.status === "completed";
+    if (filter === "completed") {
+      if (e.status !== "completed") return false;
+      // Only show completed events from last 2 weeks
+      const time = e.startTime ?? "";
+      return time >= twoWeeksAgo;
+    }
+    // "all" tab: show live + upcoming + recent completed
+    if (e.status === "completed") {
+      const time = e.startTime ?? "";
+      return time >= twoWeeksAgo;
+    }
     return true;
   });
 

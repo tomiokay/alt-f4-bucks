@@ -93,14 +93,17 @@ export default async function EventsPage() {
   // Show all synced events (filtering is done client-side via tabs)
   const recentEvents = eventSummaries;
 
-  // Show unsynced TBA events (upcoming or currently running)
+  // Show unsynced TBA events happening in the next 3 days
   const syncedKeys = new Set(eventMap.keys());
   const nowDate = new Date();
+  const threeDaysFromNow = new Date(nowDate.getTime() + 3 * 24 * 60 * 60 * 1000);
   const upcomingTbaEvents = tbaEvents
     .filter((e) => {
       if (syncedKeys.has(e.key)) return false;
+      const start = new Date(e.start_date);
       const end = new Date(e.end_date + "T23:59:59");
-      return end >= nowDate; // show anything not yet ended
+      // Show if starting within 3 days OR currently happening
+      return (start <= threeDaysFromNow && end >= nowDate);
     })
     .map((e) => ({
       key: e.key,

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { BetSlip } from "@/components/bet-slip";
 import { calculateOdds } from "@/lib/odds";
@@ -461,9 +462,7 @@ function MatchSlide({
             isComplete={match.is_complete}
           />
         </div>
-        <span className="text-[12px] font-black tracking-tight bg-gradient-to-r from-[#f0883e] to-[#f59e0b] bg-clip-text text-transparent">
-          AF4
-        </span>
+        <Image src="/logo.avif" alt="Alt-F4 Bucks" width={24} height={24} className="rounded-md" />
       </div>
 
       {/* Header */}
@@ -694,9 +693,7 @@ function PredictionSlide({
           </motion.div>
           <span className="text-[11px] text-[#7d8590]">{typeLabel}</span>
         </div>
-        <span className="text-[12px] font-black tracking-tight bg-gradient-to-r from-[#f0883e] to-[#f59e0b] bg-clip-text text-transparent">
-          AF4
-        </span>
+        <Image src="/logo.avif" alt="Alt-F4 Bucks" width={24} height={24} className="rounded-md" />
       </div>
 
       {/* Header */}

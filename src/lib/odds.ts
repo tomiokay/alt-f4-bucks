@@ -58,9 +58,11 @@ export function potentialPayout(
     return { payout: amount, profit: 0, multiplier: 1 };
   }
 
-  const payout = Math.floor((amount * newTotalPool) / newSidePool);
+  const exactPayout = (amount * newTotalPool) / newSidePool;
+  const payout = Math.floor(exactPayout);
   const profit = payout - amount;
-  const multiplier = parseFloat((payout / amount).toFixed(2));
+  // Show actual multiplier (not floored) so users see the real return rate
+  const multiplier = parseFloat((exactPayout / amount).toFixed(2));
 
   return { payout, profit, multiplier };
 }

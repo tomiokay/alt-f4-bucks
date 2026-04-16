@@ -32,36 +32,26 @@ export async function GET(request: NextRequest) {
   let eventsWithMatches = 0;
   let fetchErrors = 0;
 
-  // Process events in parallel batches of 10
-  const BATCH_SIZE = 10;
-  for (let i = 0; i < allKeys.length; i += BATCH_SIZE) {
-    const batch = allKeys.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map(async (eventKey) => {
-        const matches = await getEventMatches(eventKey);
-        if (matches.length === 0) return { eventKey, synced: 0 };
+  // Process events sequentially but with cached TBA responses
+  for (const eventKey of allKeys) {
+    try {
+      const matches = await getEventMatches(eventKey);
+      if (matches.length === 0) continue;
+      eventsWithMatches++;
+      const eventName = eventNameMap.get(eventKey) ?? eventKey;
+      const rows = matches.map((m) => tbaMatchToCache(m, eventName));
 
-        const eventName = eventNameMap.get(eventKey) ?? eventKey;
-        const rows = matches.map((m) => tbaMatchToCache(m, eventName));
+      const { error } = await service.from("match_cache").upsert(rows, {
+        onConflict: "match_key",
+      });
 
-        const { error } = await service.from("match_cache").upsert(rows, {
-          onConflict: "match_key",
-        });
-
-        if (error) throw new Error(error.message);
-        return { eventKey, synced: rows.length };
-      })
-    );
-
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        if (result.value.synced > 0) {
-          eventsWithMatches++;
-          totalSynced += result.value.synced;
-        }
+      if (!error) {
+        totalSynced += rows.length;
       } else {
         fetchErrors++;
       }
+    } catch {
+      fetchErrors++;
     }
   }
 

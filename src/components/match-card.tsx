@@ -100,7 +100,7 @@ export function MatchCard({ match, odds, onBetRed, onBetBlue, compact }: Props) 
             <span className="tabular-nums">Statbotics {odds.statboticsRedPct}/{odds.statboticsBluePct}</span>
           )}
           {(odds.redBettors + odds.blueBettors) > 0 && (
-            <span>{odds.redBettors + odds.blueBettors} bettors</span>
+            <span>{odds.redBettors + odds.blueBettors} betters</span>
           )}
         </div>
       </div>

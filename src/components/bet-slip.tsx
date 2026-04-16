@@ -249,15 +249,15 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange, existi
               {/* Summary */}
               <div className="space-y-2 pt-1">
                 <div className="flex justify-between text-[12px]">
-                  <span className="text-[#7d8590]">Avg price</span>
+                  <span className="text-[#7d8590]">Odds</span>
                   <span className="text-[#e6edf3] tabular-nums font-mono">
-                    {(pct / 100).toFixed(2)}&#162;
+                    {pct}%
                   </span>
                 </div>
                 <div className="flex justify-between text-[12px]">
-                  <span className="text-[#7d8590]">Shares</span>
+                  <span className="text-[#7d8590]">Potential payout</span>
                   <span className="text-[#e6edf3] tabular-nums font-mono">
-                    {result.payout.toLocaleString()}
+                    ${result.payout.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-[12px]">

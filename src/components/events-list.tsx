@@ -111,16 +111,10 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
     if (filter === "live") return e.status === "live";
     if (filter === "upcoming") return e.status === "upcoming";
     if (filter === "completed") {
-      if (e.status !== "completed") return false;
-      // Only show completed events from last 2 weeks
-      const time = e.startTime ?? "";
-      return time >= twoWeeksAgo;
+      return e.status === "completed";
     }
-    // "all" tab: show live + upcoming + recent completed
-    if (e.status === "completed") {
-      const time = e.startTime ?? "";
-      return time >= twoWeeksAgo;
-    }
+    // "all" tab: show live + upcoming + all completed (tab filtering handles recency)
+
     return true;
   });
 

@@ -57,9 +57,18 @@ export async function GET(request: NextRequest) {
       const eventName = eventNameMap.get(eventKey) ?? eventKey;
       const rows = matches.map((m) => tbaMatchToCache(m, eventName));
 
-      const { error } = await service.from("match_cache").upsert(rows, {
+      let { error } = await service.from("match_cache").upsert(rows, {
         onConflict: "match_key",
       });
+
+      // If upsert fails due to missing columns, retry without optional fields
+      if (error && error.code === "PGRST204") {
+        const basicRows = rows.map(({ red_auto_points, blue_auto_points, red_rp, blue_rp, ...rest }) => rest);
+        const retry = await service.from("match_cache").upsert(basicRows, {
+          onConflict: "match_key",
+        });
+        error = retry.error;
+      }
 
       if (!error) {
         totalSynced += rows.length;

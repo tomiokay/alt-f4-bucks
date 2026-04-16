@@ -25,24 +25,17 @@ export async function GET(request: NextRequest) {
   const currentEvents = await getCurrentEvents();
   const eventNameMap = new Map(currentEvents.map((e) => [e.key, e.name]));
 
+  const trackedKeys = await getActiveEventKeys();
+
   let allKeys: string[];
   if (singleEvent) {
     allKeys = [singleEvent];
   } else {
-    const trackedKeys = await getActiveEventKeys();
-    // On free tier, limit to tracked events + recent TBA events (last 2 weeks)
-    const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const twoWeeksAhead = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    const recentTbaKeys = currentEvents
-      .filter((e) => {
-        const end = new Date(e.end_date + "T23:59:59");
-        const start = new Date(e.start_date);
-        return end >= twoWeeksAgo && start <= twoWeeksAhead;
-      })
-      .map((e) => e.key);
-
-    allKeys = [...new Set([...recentTbaKeys, ...trackedKeys])];
+    // Sync ALL TBA events + any already-tracked events
+    allKeys = [...new Set([
+      ...currentEvents.map((e) => e.key),
+      ...trackedKeys,
+    ])];
   }
 
   let totalSynced = 0;

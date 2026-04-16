@@ -34,16 +34,14 @@ function stripFrc(teamKey: string): string {
   return teamKey.replace(/^frc/, "");
 }
 
-async function tbaFetch(url: string): Promise<Response | null> {
+async function tbaFetch(url: string, noCache = false): Promise<Response | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(url, {
       headers: headers(),
-      next: { revalidate: 60 },
+      ...(noCache ? { cache: "no-store" as const } : { next: { revalidate: 120 } }),
       signal: controller.signal,
-      // @ts-expect-error -- Next.js extended fetch option
-      verbose: true,
     });
     clearTimeout(timeout);
     return res;
@@ -53,8 +51,8 @@ async function tbaFetch(url: string): Promise<Response | null> {
   }
 }
 
-export async function getEventMatches(eventKey: string): Promise<TBAMatch[]> {
-  const res = await tbaFetch(`${TBA_BASE}/event/${eventKey}/matches`);
+export async function getEventMatches(eventKey: string, noCache = false): Promise<TBAMatch[]> {
+  const res = await tbaFetch(`${TBA_BASE}/event/${eventKey}/matches`, noCache);
   if (!res || !res.ok) return [];
   return res.json();
 }

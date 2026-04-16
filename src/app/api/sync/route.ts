@@ -31,11 +31,14 @@ export async function GET(request: NextRequest) {
   ]);
 
   let totalSynced = 0;
+  let eventsWithMatches = 0;
+  let fetchErrors = 0;
 
   for (const eventKey of allKeys) {
     try {
-      const matches = await getEventMatches(eventKey);
+      const matches = await getEventMatches(eventKey, true);
       if (matches.length === 0) continue;
+      eventsWithMatches++;
       const eventName = eventNameMap.get(eventKey) ?? eventKey;
       const rows = matches.map((m) => tbaMatchToCache(m, eventName));
 
@@ -45,7 +48,7 @@ export async function GET(request: NextRequest) {
 
       if (!error) totalSynced += rows.length;
     } catch {
-      // Skip events that fail
+      fetchErrors++;
     }
   }
 
@@ -149,5 +152,7 @@ export async function GET(request: NextRequest) {
     resolved: totalResolved,
     predResolved,
     events: allKeys.size,
+    eventsWithMatches,
+    fetchErrors,
   });
 }

@@ -101,7 +101,7 @@ async function HomeContent() {
   // Top 10 markets by pool size for the carousel
   // Include recently resolved big markets (resolved in last 3 hours)
   const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-  const recentlyResolvedBig = recentCompleted.filter((e) => {
+  const recentlyResolvedBig = completed.filter((e) => {
     if (!e.match.is_complete) return false;
     const resolvedTime = e.match.actual_time ?? e.match.scheduled_time ?? "";
     return resolvedTime >= threeHoursAgo && e.odds.totalPool >= 500;

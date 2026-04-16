@@ -15,7 +15,8 @@ type Props = {
 
 export function TradingPanel({ match, odds, balance }: Props) {
   const [side, setSide] = useState<"red" | "blue">("red");
-  const [amount, setAmount] = useState(10);
+  const [amountStr, setAmountStr] = useState("10");
+  const amount = parseInt(amountStr) || 0;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -107,8 +108,8 @@ export function TradingPanel({ match, odds, balance }: Props) {
               type="number"
               min={1}
               max={balance}
-              value={amount}
-              onChange={(e) => { setAmount(Math.max(1, parseInt(e.target.value) || 1)); setConfirm(false); }}
+              value={amountStr}
+              onChange={(e) => { setAmountStr(e.target.value); setConfirm(false); }}
               className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] pl-7 pr-3 text-[14px] text-[#e6edf3] focus:border-[#388bfd] focus:outline-none"
             />
           </div>
@@ -116,7 +117,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
             {presets.map((p) => (
               <button
                 key={p}
-                onClick={() => { setAmount(p); setConfirm(false); }}
+                onClick={() => { setAmountStr(String(p)); setConfirm(false); }}
                 className={cn(
                   "flex-1 rounded-md py-1.5 text-[11px] font-medium transition-colors border",
                   amount === p
@@ -128,7 +129,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
               </button>
             ))}
             <button
-              onClick={() => { setAmount(balance); setConfirm(false); }}
+              onClick={() => { setAmountStr(String(balance)); setConfirm(false); }}
               className="flex-1 rounded-md py-1.5 text-[11px] font-medium border border-[#21262d] text-[#7d8590] hover:text-[#e6edf3] transition-colors"
             >
               Max

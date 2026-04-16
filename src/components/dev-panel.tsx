@@ -69,7 +69,7 @@ export function DevPanel({
       </div>
 
       {/* Manage Events */}
-      {eventKeys.length > 0 && (
+      {eventKeys.filter((ek) => ek.includes("devtest") || !/^\d{4}[a-z]{2,}$/.test(ek)).length > 0 && (
         <div>
           <h2 className="text-[14px] font-medium text-[#7d8590] mb-3">Manage Events</h2>
           <DeleteEventCard eventKeys={eventKeys} eventNames={eventNames} router={router} />
@@ -828,7 +828,9 @@ function DeleteEventCard({
         <p className="text-[11px] text-[#484f58]">Remove an event and all its matches, bets, and prediction markets</p>
       </div>
       <div className="space-y-2">
-        {eventKeys.map((ek) => (
+        {eventKeys
+          .filter((ek) => ek.includes("devtest") || !/^\d{4}[a-z]{2,}$/.test(ek))
+          .map((ek) => (
           <div key={ek} className="flex items-center justify-between rounded-lg bg-[#0d1117] px-3 py-2">
             <div className="min-w-0">
               <span className="text-[12px] text-[#e6edf3] block truncate">{eventNames[ek] ?? ek}</span>

@@ -206,6 +206,39 @@ export async function adminRenameUser(userId: string, newName: string) {
   return { success: true };
 }
 
+// Admin: change a user's role
+export async function adminSetRole(userId: string, role: "member" | "manager" | "admin") {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") {
+    return { error: "Only admins can change roles" };
+  }
+
+  if (userId === user.id) return { error: "You cannot change your own role." };
+
+  const service = await createServiceClient();
+  const { error } = await service
+    .from("profiles")
+    .update({ role })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager");
+  return { success: true };
+}
+
 // Admin: delete a user account entirely (frees up email for re-registration)
 export async function adminDeleteUser(userId: string) {
   const supabase = await createClient();

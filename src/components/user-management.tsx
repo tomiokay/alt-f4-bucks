@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setBanStatus, adminRenameUser, adminDeleteUser } from "@/app/actions/settings";
+import { setBanStatus, adminRenameUser, adminDeleteUser, adminSetRole } from "@/app/actions/settings";
 import { resetUser } from "@/app/actions/dev";
 import { cn } from "@/lib/utils";
 import { Pencil, X, Check, RotateCcw, Trash2 } from "lucide-react";
@@ -24,6 +24,9 @@ export function UserManagement({ members, currentUserId }: Props) {
   const [editName, setEditName] = useState("");
   const [names, setNames] = useState<Record<string, string>>(
     Object.fromEntries(members.map((m) => [m.id, m.display_name]))
+  );
+  const [roles, setRoles] = useState<Record<string, string>>(
+    Object.fromEntries(members.map((m) => [m.id, m.role]))
   );
 
   const filtered = members.filter(
@@ -162,11 +165,31 @@ export function UserManagement({ members, currentUserId }: Props) {
                         <Pencil className="h-3 w-3" />
                       </button>
                     )}
-                    {member.role !== "member" && (
+                    {!isSelf ? (
+                      <select
+                        value={roles[member.id] || member.role}
+                        onChange={(e) => {
+                          const newRole = e.target.value as "member" | "manager" | "admin";
+                          setRoles((r) => ({ ...r, [member.id]: newRole }));
+                          startTransition(async () => {
+                            const res = await adminSetRole(member.id, newRole);
+                            if (res.error) {
+                              setErrors((err) => ({ ...err, [member.id]: res.error! }));
+                              setRoles((r) => ({ ...r, [member.id]: member.role }));
+                            }
+                          });
+                        }}
+                        className="text-[10px] bg-transparent text-[#484f58] hover:text-[#7d8590] cursor-pointer focus:outline-none shrink-0"
+                      >
+                        <option value="member">member</option>
+                        <option value="manager">manager</option>
+                        <option value="admin">admin</option>
+                      </select>
+                    ) : member.role !== "member" ? (
                       <span className="text-[10px] text-[#484f58] shrink-0">
                         {member.role}
                       </span>
-                    )}
+                    ) : null}
                     {isBanned && (
                       <span className="text-[10px] text-[#ef4444] font-medium shrink-0">
                         BANNED

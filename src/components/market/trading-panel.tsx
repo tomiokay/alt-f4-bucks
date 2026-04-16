@@ -178,7 +178,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
           </button>
         ) : (
           <div className="text-center py-2 text-[13px] text-[#484f58]">
-            Market resolved
+            {match.is_complete ? "Market resolved" : "Betting closed — waiting for result"}
           </div>
         )}
       </div>

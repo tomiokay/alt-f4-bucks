@@ -77,16 +77,11 @@ export default async function EventsPage() {
     e.isFavorite || (e.startTime && e.startTime >= twoWeeksAgo) || e.upcomingMatches > 0
   );
 
-  // Find TBA events starting in the next 3 days that aren't synced
+  // Show ALL TBA events from the 2-week window that aren't synced yet
+  // (these have no match schedule on TBA yet)
   const syncedKeys = new Set(eventKeys);
-  const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-  const now = new Date();
   const upcomingTbaEvents = tbaEvents
-    .filter((e) => {
-      if (syncedKeys.has(e.key)) return false;
-      const start = new Date(e.start_date);
-      return start >= now && start <= threeDaysFromNow;
-    })
+    .filter((e) => !syncedKeys.has(e.key))
     .map((e) => ({
       key: e.key,
       name: e.name,

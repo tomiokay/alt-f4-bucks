@@ -4,16 +4,16 @@ import { createServiceClient, createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/db/profiles";
 import { revalidatePath } from "next/cache";
 
-async function requireDev() {
+async function requireAdmin() {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "dev") {
-    throw new Error("Unauthorized — dev role required");
+  if (!profile || !["manager", "admin"].includes(profile.role)) {
+    throw new Error("Unauthorized");
   }
   return profile;
 }
 
 export async function createTestMatch(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const eventName = formData.get("eventName") as string || "Dev Test Event";
@@ -50,7 +50,7 @@ export async function createTestMatch(formData: FormData) {
 }
 
 export async function resolveTestMatch(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const matchKey = formData.get("matchKey") as string;
@@ -127,7 +127,7 @@ export async function resolveTestMatch(formData: FormData) {
 }
 
 export async function createTestEvent(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const eventName = formData.get("eventName") as string || "Dev Test Regional";
@@ -180,7 +180,7 @@ export async function createTestEvent(formData: FormData) {
 }
 
 export async function grantBucks(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const userId = formData.get("userId") as string;
@@ -202,7 +202,7 @@ export async function grantBucks(formData: FormData) {
 }
 
 export async function resetUser(userId: string) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   // Delete user's bets, prediction bets, comments, notifications
@@ -230,7 +230,7 @@ export async function resetUser(userId: string) {
 const RESET_PASSWORD = process.env.RESET_PASSWORD || "altf4reset2026";
 
 export async function resetEverything(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const password = formData.get("password") as string;
@@ -266,7 +266,7 @@ export async function resetEverything(formData: FormData) {
 }
 
 export async function createTestRankingsAndAlliances(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const eventKey = formData.get("eventKey") as string;
@@ -353,7 +353,7 @@ export async function createTestRankingsAndAlliances(formData: FormData) {
 }
 
 export async function createTestPlayoffMatches(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const eventKey = formData.get("eventKey") as string;
@@ -459,7 +459,7 @@ export async function createTestPlayoffMatches(formData: FormData) {
 }
 
 export async function resolveTestPredictionMarket(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const marketId = formData.get("marketId") as string;
@@ -483,7 +483,7 @@ export async function resolveTestPredictionMarket(formData: FormData) {
 }
 
 export async function deleteEvent(eventKey: string) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   // Only allow deleting dev/test events (keys containing "devtest" or generated with Date.now base36)
@@ -529,7 +529,7 @@ export async function deleteEvent(eventKey: string) {
 }
 
 export async function updateTeamNumber(formData: FormData) {
-  await requireDev();
+  await requireAdmin();
   const service = await createServiceClient();
 
   const userId = formData.get("userId") as string;

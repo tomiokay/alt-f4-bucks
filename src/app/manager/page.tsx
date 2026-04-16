@@ -10,7 +10,7 @@ import { UserManagement } from "@/components/user-management";
 
 export default async function ManagerPage() {
   const profile = await getCurrentProfile();
-  if (!profile || !["manager", "admin", "dev"].includes(profile.role)) {
+  if (!profile || !["manager", "admin"].includes(profile.role)) {
     redirect("/dashboard");
   }
 

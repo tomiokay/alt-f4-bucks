@@ -11,7 +11,7 @@ import type { MatchCache, PredictionMarket, PredictionPoolOption } from "@/lib/t
 
 export default async function DevPage() {
   const profile = await getCurrentProfile();
-  if (!profile || !["dev"].includes(profile.role)) {
+  if (!profile || !["admin"].includes(profile.role)) {
     redirect("/");
   }
 

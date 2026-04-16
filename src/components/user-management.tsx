@@ -184,7 +184,6 @@ export function UserManagement({ members, currentUserId }: Props) {
                         <option value="member">member</option>
                         <option value="manager">manager</option>
                         <option value="admin">admin</option>
-                        <option value="dev">dev</option>
                       </select>
                     ) : member.role !== "member" ? (
                       <span className="text-[10px] text-[#484f58] shrink-0">

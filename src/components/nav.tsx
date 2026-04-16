@@ -31,8 +31,8 @@ const CATEGORY_LINKS = [
   { href: "/betting", label: "Markets" },
   { href: "/events", label: "Events" },
   { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/manager", label: "Admin", role: ["manager", "admin", "dev"] as string[] },
-  { href: "/dev", label: "Dev", role: ["dev"] as string[] },
+  { href: "/manager", label: "Admin", role: ["manager", "admin"] as string[] },
+  { href: "/dev", label: "Dev", role: ["admin"] as string[] },
 ];
 
 export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 }: NavProps) {

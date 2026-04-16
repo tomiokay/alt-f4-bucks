@@ -460,6 +460,15 @@ export async function deleteEvent(eventKey: string) {
   await requireAdmin();
   const service = await createServiceClient();
 
+  // Only allow deleting dev/test events (keys containing "devtest" or generated with Date.now base36)
+  if (!eventKey.includes("devtest") && !eventKey.match(/^\d{4}devtest/)) {
+    // Check if it looks like a real TBA event key (e.g. "2026miket")
+    const isRealEvent = /^\d{4}[a-z]{2,}$/.test(eventKey);
+    if (isRealEvent) {
+      return { success: false, error: "Cannot delete real events — only dev/test events can be deleted" };
+    }
+  }
+
   // Delete in order: prediction bets → prediction markets → odds history → comments → notifications → pool bets → match cache
   const { data: predMarkets } = await service
     .from("prediction_markets")

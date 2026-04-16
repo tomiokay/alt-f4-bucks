@@ -229,8 +229,9 @@ export function TrendingMarkets({
               />
             )
           )}
-          {matches.length === 0 && browsableMarkets.length === 0 && completed.length > 0 && (
+          {matches.length === 0 && browsableMarkets.length === 0 && completed.filter((e) => e.odds.totalPool > 0).length > 0 && (
             [...completed]
+              .filter((e) => e.odds.totalPool > 0)
               .sort((a, b) => {
                 const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
                 const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
@@ -241,7 +242,7 @@ export function TrendingMarkets({
                 <MarketCard key={item.match.match_key} item={item} />
               ))
           )}
-          {matches.length === 0 && browsableMarkets.length === 0 && completed.length === 0 && <EmptyState />}
+          {matches.length === 0 && browsableMarkets.length === 0 && completed.filter((e) => e.odds.totalPool > 0).length === 0 && <EmptyState />}
         </div>
       )}
 
@@ -255,9 +256,10 @@ export function TrendingMarkets({
               onBetBlue={() => openSlip(item.match, "blue")}
             />
           ))}
-          {/* Show recent completed if no upcoming */}
-          {matches.length === 0 && completed.length > 0 && (
+          {/* Show recent completed with bets if no upcoming */}
+          {matches.length === 0 && completed.filter((e) => e.odds.totalPool > 0).length > 0 && (
             [...completed]
+              .filter((e) => e.odds.totalPool > 0)
               .sort((a, b) => {
                 const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
                 const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
@@ -268,7 +270,7 @@ export function TrendingMarkets({
                 <MarketCard key={item.match.match_key} item={item} />
               ))
           )}
-          {matches.length === 0 && completed.length === 0 && <EmptyState />}
+          {matches.length === 0 && completed.filter((e) => e.odds.totalPool > 0).length === 0 && <EmptyState />}
         </div>
       )}
 
@@ -323,9 +325,11 @@ export function TrendingMarkets({
         const resolvedCustom = resolvedPredictionMarkets.filter((m) => m.is_custom);
 
         if (tab === "matches" || tab === "all") {
-          if (completed.length === 0) return null;
+          // Hide completed matches with no bets
+          const withBets = completed.filter((e) => e.odds.totalPool > 0);
+          if (withBets.length === 0) return null;
           // Sort by most recent first
-          const sorted = [...completed].sort((a, b) => {
+          const sorted = [...withBets].sort((a, b) => {
             const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
             const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
             return bTime.localeCompare(aTime);

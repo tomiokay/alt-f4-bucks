@@ -78,24 +78,18 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
 
   const unsyncedDisplay: DisplayEvent[] = upcomingTbaEvents
     .filter((e) => !syncedKeys.has(e.key))
-    .map((e) => {
-      const now = new Date();
-      const start = new Date(e.startDate);
-      const end = new Date(e.endDate + "T23:59:59");
-      const isLive = start <= now && end >= now;
-      return {
-        key: e.key,
-        name: e.name,
-        status: isLive ? "live" as const : "upcoming" as const,
-        hasSchedule: false,
-        totalMatches: 0,
-        completedMatches: 0,
-        upcomingMatches: 0,
-        totalVolume: 0,
-        startTime: e.startDate,
-        isFavorite: favorites.has(e.key),
-      };
-    });
+    .map((e) => ({
+      key: e.key,
+      name: e.name,
+      status: "upcoming" as const, // No schedule = always upcoming, never "live"
+      hasSchedule: false,
+      totalMatches: 0,
+      completedMatches: 0,
+      upcomingMatches: 0,
+      totalVolume: 0,
+      startTime: e.startDate,
+      isFavorite: favorites.has(e.key),
+    }));
 
   const syncedDisplay: DisplayEvent[] = (search ? allEvents : events).map((e) => ({
     ...e,

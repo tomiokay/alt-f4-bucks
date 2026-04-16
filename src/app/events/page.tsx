@@ -18,24 +18,28 @@ export default async function EventsPage() {
     getCurrentEvents(),
     service
       .from("match_cache")
-      .select("event_key, event_name, is_complete")
-      .limit(20000),
+      .select("event_key, event_name, is_complete, scheduled_time")
+      .limit(50000),
   ]);
 
   const favoriteSet = new Set(favoriteKeys);
 
   // Group by event and count
-  const eventStats = new Map<string, { name: string; total: number; completed: number }>();
-  for (const m of (allMatches ?? []) as { event_key: string; event_name: string; is_complete: boolean }[]) {
+  const eventStats = new Map<string, { name: string; total: number; completed: number; earliest: string | null }>();
+  for (const m of (allMatches ?? []) as { event_key: string; event_name: string; is_complete: boolean; scheduled_time: string | null }[]) {
     const existing = eventStats.get(m.event_key);
     if (existing) {
       existing.total++;
       if (m.is_complete) existing.completed++;
+      if (m.scheduled_time && (!existing.earliest || m.scheduled_time < existing.earliest)) {
+        existing.earliest = m.scheduled_time;
+      }
     } else {
       eventStats.set(m.event_key, {
         name: m.event_name,
         total: 1,
         completed: m.is_complete ? 1 : 0,
+        earliest: m.scheduled_time,
       });
     }
   }
@@ -53,7 +57,7 @@ export default async function EventsPage() {
       completedMatches: stats.completed,
       upcomingMatches: stats.total - stats.completed,
       totalVolume: volume,
-      startTime: null as string | null,
+      startTime: stats.earliest,
       isFavorite: favoriteSet.has(key),
     };
   });

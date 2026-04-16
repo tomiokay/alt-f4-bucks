@@ -122,7 +122,11 @@ export function TrendingMarkets({
 
   function getUnifiedItems(): UnifiedItem[] {
     const items: UnifiedItem[] = [];
+    // Include upcoming matches + completed matches with bets
     for (const m of matches) items.push({ kind: "match", data: m });
+    for (const m of completed) {
+      if (m.odds.totalPool > 0) items.push({ kind: "match", data: m });
+    }
     for (const p of browsableMarkets) items.push({ kind: "prediction", data: p });
 
     return items.sort((a, b) => {

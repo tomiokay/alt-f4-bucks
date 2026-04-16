@@ -7,7 +7,9 @@ import {
   createCustomMarket,
   resolveCustomMarket,
   voidCustomMarket,
+  toggleFeatured,
 } from "@/app/actions/custom-markets";
+import { Star } from "lucide-react";
 
 type Market = {
   id: string;
@@ -16,6 +18,7 @@ type Market = {
   options: { key: string; label: string }[];
   correct_option: string | null;
   is_custom: boolean;
+  featured: boolean;
 };
 
 type Props = {
@@ -146,13 +149,28 @@ export function CustomMarketsManager({ markets }: Props) {
                     <span className="ml-2 text-[10px] text-[#f59e0b] bg-[#f59e0b]/10 px-1.5 py-0.5 rounded">Custom</span>
                   )}
                 </div>
-                <button
-                  onClick={() => handleVoid(market.id)}
-                  disabled={isPending}
-                  className="text-[11px] text-[#ef4444] hover:text-[#dc2626] disabled:opacity-50"
-                >
-                  Void
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      startTransition(async () => {
+                        await toggleFeatured(market.id);
+                        router.refresh();
+                      });
+                    }}
+                    disabled={isPending}
+                    className="flex items-center gap-1 text-[11px] disabled:opacity-50"
+                    title={market.featured ? "Unfeature" : "Feature"}
+                  >
+                    <Star className={cn("h-3.5 w-3.5", market.featured ? "text-[#f59e0b] fill-[#f59e0b]" : "text-[#484f58] hover:text-[#7d8590]")} />
+                  </button>
+                  <button
+                    onClick={() => handleVoid(market.id)}
+                    disabled={isPending}
+                    className="text-[11px] text-[#ef4444] hover:text-[#dc2626] disabled:opacity-50"
+                  >
+                    Void
+                  </button>
+                </div>
               </div>
 
               {resolveId === market.id ? (

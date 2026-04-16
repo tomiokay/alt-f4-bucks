@@ -56,7 +56,7 @@ export async function getOpenCustomMarkets() {
   const service = await createServiceClient();
   const { data } = await service
     .from("prediction_markets")
-    .select("id, title, status, options, correct_option, is_custom")
+    .select("id, title, status, options, correct_option, is_custom, featured")
     .in("status", ["open", "closed"])
     .order("created_at", { ascending: false })
     .limit(50);
@@ -68,6 +68,7 @@ export async function getOpenCustomMarkets() {
     options: { key: string; label: string }[];
     correct_option: string | null;
     is_custom: boolean;
+    featured: boolean;
   }[];
 }
 
@@ -112,6 +113,30 @@ export async function resolveCustomMarket(marketId: string, correctOption: strin
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Failed to resolve" };
   }
+}
+
+export async function toggleFeatured(marketId: string) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const { data: market } = await service
+    .from("prediction_markets")
+    .select("featured")
+    .eq("id", marketId)
+    .single();
+
+  if (!market) return { error: "Market not found" };
+
+  const { error } = await service
+    .from("prediction_markets")
+    .update({ featured: !market.featured })
+    .eq("id", marketId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/betting");
+  return { success: true, featured: !market.featured };
 }
 
 export async function voidCustomMarket(marketId: string) {

@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { getProfileById } from "@/db/profiles";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentProfile, getProfileById } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import { getUserPoolBets } from "@/db/bets";
 import { getUserPredictionBets } from "@/db/predictions";
@@ -11,6 +11,9 @@ type Props = {
 
 export default async function PublicProfilePage({ params }: Props) {
   const { id } = await params;
+
+  const currentUser = await getCurrentProfile();
+  if (!currentUser) redirect("/login");
 
   const profile = await getProfileById(id);
   if (!profile) notFound();

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import {
@@ -190,7 +191,10 @@ async function HomeContent() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+
   return (
     <div className="space-y-0">
       <AutoSync />

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getLeaderboard } from "@/db/leaderboard";
 import { getBiggestWinsThisWeek } from "@/db/bets";
 import { getCurrentProfile } from "@/db/profiles";
@@ -10,6 +11,7 @@ export const revalidate = 30;
 
 export default async function LeaderboardPage() {
   const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
 
   const [leaderboard, biggestWins, customBoards, allProfiles] = await Promise.all([
     getLeaderboard(100),

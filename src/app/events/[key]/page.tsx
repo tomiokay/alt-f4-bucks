@@ -1,4 +1,5 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import { getCachedMatches, getAllPoolSummaries } from "@/db/bets";
@@ -6,7 +7,7 @@ import { getEventPredictionMarkets, getAllPredictionPools } from "@/db/predictio
 import { EventDetail } from "@/components/event-detail";
 import { AutoSync } from "@/components/auto-sync";
 import type { PoolSummary, PredictionPoolOption } from "@/lib/types";
-import { getEventRankings, getEventAlliances } from "@/lib/tba";
+import { getEventRankings, getEventAlliances, getEventTeams, getEventInfo } from "@/lib/tba";
 import { getEventPredictions } from "@/lib/statbotics";
 import { ensureEventMarkets, resolveScoreMarkets } from "@/app/actions/predictions";
 
@@ -28,7 +29,63 @@ export default async function EventPage({ params }: Props) {
     getEventPredictions(key),
   ]);
 
-  if (matches.length === 0) notFound();
+  if (matches.length === 0) {
+    // No match schedule — show team list from TBA
+    const [eventInfo, teams] = await Promise.all([
+      getEventInfo(key),
+      getEventTeams(key),
+    ]);
+
+    const eventName = eventInfo?.name ?? key;
+    const sortedTeams = teams.sort((a, b) => a.team_number - b.team_number);
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <Link href="/events" className="text-[12px] text-[#388bfd] hover:text-[#58a6ff] mb-2 inline-block">
+            ← Back to events
+          </Link>
+          <h1 className="text-[20px] font-semibold text-[#e6edf3]">{eventName}</h1>
+          {eventInfo && (
+            <p className="text-[12px] text-[#7d8590] mt-1">
+              {new Date(eventInfo.start_date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
+              {" — "}
+              {new Date(eventInfo.end_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-xl bg-[#161b22] border border-[#21262d] p-5">
+          <p className="text-[14px] text-[#7d8590] text-center py-4">
+            No match schedule yet — check back when matches are posted on TBA
+          </p>
+        </div>
+
+        {sortedTeams.length > 0 && (
+          <div>
+            <h2 className="text-[16px] font-semibold text-[#e6edf3] mb-3">
+              Teams ({sortedTeams.length})
+            </h2>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedTeams.map((team) => (
+                <div
+                  key={team.key}
+                  className="rounded-lg bg-[#161b22] border border-[#21262d] px-4 py-3 flex items-center gap-3"
+                >
+                  <span className="text-[14px] font-semibold text-[#e6edf3] tabular-nums font-mono w-12">
+                    {team.team_number}
+                  </span>
+                  <span className="text-[13px] text-[#7d8590] truncate">
+                    {team.nickname}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const pools: Record<string, PoolSummary> = {};
   for (const [k, v] of poolMap) {

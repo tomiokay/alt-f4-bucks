@@ -63,6 +63,18 @@ export async function getMatch(matchKey: string): Promise<TBAMatch | null> {
   return res.json();
 }
 
+export async function getEventTeams(eventKey: string): Promise<{ key: string; team_number: number; nickname: string }[]> {
+  const res = await tbaFetch(`${TBA_BASE}/event/${eventKey}/teams/simple`);
+  if (!res || !res.ok) return [];
+  return res.json();
+}
+
+export async function getEventInfo(eventKey: string): Promise<TBAEvent | null> {
+  const res = await tbaFetch(`${TBA_BASE}/event/${eventKey}/simple`);
+  if (!res || !res.ok) return null;
+  return res.json();
+}
+
 export async function getCurrentEvents(year?: number): Promise<TBAEvent[]> {
   const y = year ?? new Date().getFullYear();
   const res = await tbaFetch(`${TBA_BASE}/events/${y}/simple`);

@@ -99,11 +99,11 @@ export default async function EventPage({ params }: Props) {
     fullPredictions[k] = { redPredScore: v.redPredScore, bluePredScore: v.bluePredScore };
   }
 
-  // Ensure markets exist (don't block page load — they'll appear on next visit)
-  Promise.allSettled([
+  // Ensure markets exist before fetching (must await so they appear on first load)
+  await Promise.allSettled([
     ensureEventMarkets(key, matches, fullPredictions, rankings, alliances),
     resolveScoreMarkets(key),
-  ]).catch(() => {});
+  ]);
 
   // Fetch prediction markets and pools
   const [predictionMarkets, predPoolsMap] = await Promise.all([

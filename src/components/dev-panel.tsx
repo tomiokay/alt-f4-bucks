@@ -757,14 +757,14 @@ function ResetCard({ router }: { router: ReturnType<typeof useRouter> }) {
     setConfirm(false);
     setPassword("");
     if (res.error) { setMsg(`Error: ${res.error}`); }
-    else { setMsg("Everything reset! All users back to $1,000."); router.refresh(); }
+    else { setMsg("Everything reset! All users back to $10,000."); router.refresh(); }
   }
 
   return (
     <div className="rounded-xl bg-[#161b22] border border-[#ef4444]/30 p-5 space-y-3">
       <div>
         <h3 className="text-[14px] font-semibold text-[#ef4444]">Reset Everything</h3>
-        <p className="text-[11px] text-[#484f58]">Deletes all bets, transactions, comments. Gives everyone $1,000 fresh.</p>
+        <p className="text-[11px] text-[#484f58]">Deletes all bets, transactions, comments. Gives everyone $10,000 fresh.</p>
       </div>
       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Reset password"
         className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-3 text-[12px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#ef4444] focus:outline-none" />

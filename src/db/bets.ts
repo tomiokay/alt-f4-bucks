@@ -94,13 +94,39 @@ export async function getMatchByKey(matchKey: string): Promise<MatchCache | null
 
 export async function getActiveEventKeys(): Promise<string[]> {
   const supabase = await createClient();
+  // Use a minimal select with distinct-like behavior via group
   const { data } = await supabase
     .from("match_cache")
     .select("event_key")
-    .limit(10000);
+    .limit(1000);
 
   const keys = new Set((data ?? []).map((d: { event_key: string }) => d.event_key));
   return Array.from(keys);
+}
+
+export async function getAllCachedMatches(): Promise<MatchCache[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("match_cache")
+    .select("*")
+    .order("scheduled_time", { ascending: true })
+    .limit(2000);
+
+  return (data ?? []) as MatchCache[];
+}
+
+export async function getEventList(): Promise<{ key: string; name: string }[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("match_cache")
+    .select("event_key, event_name")
+    .limit(10000);
+
+  const map = new Map<string, string>();
+  for (const d of (data ?? []) as { event_key: string; event_name: string }[]) {
+    if (!map.has(d.event_key)) map.set(d.event_key, d.event_name);
+  }
+  return Array.from(map.entries()).map(([key, name]) => ({ key, name }));
 }
 
 // --- Search matches ---

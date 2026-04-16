@@ -219,14 +219,14 @@ export async function resetEverything(formData: FormData) {
   await service.from("pool_bets").delete().neq("id", "00000000-0000-0000-0000-000000000000");
   await service.from("transactions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
 
-  // Re-grant 1000 AF4 to all users
+  // Re-grant 10,000 AF4 to all users
   const { data: profiles } = await service.from("profiles").select("id");
   if (profiles) {
     const bonuses = profiles.map((p) => ({
       type: "award" as const,
-      amount: 1000,
+      amount: 10000,
       to_user_id: p.id,
-      reason: "Welcome bonus — 1,000 AF4 to get started",
+      reason: "Welcome bonus — 10,000 AF4 to get started",
       category: "bonus",
     }));
     await service.from("transactions").insert(bonuses);

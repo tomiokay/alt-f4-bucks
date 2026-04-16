@@ -1,14 +1,11 @@
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import {
-  getActiveEventKeys,
-  getCachedMatches,
+  getAllCachedMatches,
   getAllPoolSummaries,
   getOddsHistory,
 } from "@/db/bets";
 import {
-  getEventPredictionMarkets,
-  getAllPredictionPools,
   getAllOpenPredictionMarkets,
   getAllPredictionPoolSummaries,
 } from "@/db/predictions";
@@ -31,21 +28,28 @@ export type EnrichedMatch = {
 export default async function HomePage() {
   const profile = await getCurrentProfile();
 
-  const [balance, eventKeys, poolMap] = await Promise.all([
+  // Single parallel batch — all data in one round trip
+  const [balance, allMatches, poolMap, allPredMarkets, allPredPoolsMap] = await Promise.all([
     profile ? getUserBalance(profile.id) : Promise.resolve(0),
-    getActiveEventKeys(),
+    getAllCachedMatches(),
     getAllPoolSummaries(),
+    getAllOpenPredictionMarkets(),
+    getAllPredictionPoolSummaries(),
   ]);
-
-  let allMatches: MatchCache[] = [];
-  if (eventKeys.length > 0) {
-    const arrays = await Promise.all(eventKeys.map((ek) => getCachedMatches(ek)));
-    allMatches = arrays.flat();
-  }
 
   const pools: Record<string, PoolSummary> = {};
   for (const [key, val] of poolMap) {
     pools[key] = val;
+  }
+
+  // Convert prediction pools
+  const allPredPools: Record<string, Record<string, PredictionPoolOption>> = {};
+  for (const [mId, optMap] of allPredPoolsMap) {
+    const opts: Record<string, PredictionPoolOption> = {};
+    for (const [optKey, optVal] of optMap) {
+      opts[optKey] = optVal;
+    }
+    allPredPools[mId] = opts;
   }
 
   // Enrich matches
@@ -73,46 +77,15 @@ export default async function HomePage() {
   );
 
   const featured = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool)[0] ?? null;
+
+  // Only fetch odds history for the one featured match (cheap single query)
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
 
-  // Fetch event-level prediction markets for carousel
-  const carouselPredMarkets: PredictionMarket[] = [];
-  const carouselPredPools: Record<string, Record<string, PredictionPoolOption>> = {};
-  for (const ek of eventKeys) {
-    try {
-      const markets = await getEventPredictionMarkets(ek);
-      const eventLevelMarkets = markets.filter(
-        (m) => m.status === "open" && m.match_key === null && (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")
-      );
-      carouselPredMarkets.push(...eventLevelMarkets);
-
-      const poolsMap = await getAllPredictionPools(ek);
-      for (const [mId, optMap] of poolsMap) {
-        const opts: Record<string, PredictionPoolOption> = {};
-        for (const [optKey, optVal] of optMap) {
-          opts[optKey] = optVal;
-        }
-        carouselPredPools[mId] = opts;
-      }
-    } catch {
-      // Prediction tables may not exist yet
-    }
-  }
-
-  // Fetch ALL prediction markets for the trending grid
-  const [allPredMarkets, allPredPoolsMap] = await Promise.all([
-    getAllOpenPredictionMarkets(),
-    getAllPredictionPoolSummaries(),
-  ]);
-
-  const allPredPools: Record<string, Record<string, PredictionPoolOption>> = {};
-  for (const [mId, optMap] of allPredPoolsMap) {
-    const opts: Record<string, PredictionPoolOption> = {};
-    for (const [optKey, optVal] of optMap) {
-      opts[optKey] = optVal;
-    }
-    allPredPools[mId] = opts;
-  }
+  // Carousel prediction markets: open, event-level
+  const carouselPredMarkets = allPredMarkets.filter(
+    (m) => m.status === "open" && m.match_key === null &&
+    (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")
+  );
 
   const breaking = [...completed]
     .sort((a, b) => {
@@ -160,7 +133,7 @@ export default async function HomePage() {
             balance={balance}
             oddsHistory={featuredHistory}
             predictionMarkets={carouselPredMarkets}
-            predictionPools={carouselPredPools}
+            predictionPools={allPredPools}
           />
           <TrendingMarkets
             matches={upcoming}

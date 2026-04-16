@@ -1,17 +1,20 @@
 import { getCurrentProfile } from "@/db/profiles";
 import { redirect } from "next/navigation";
 import { getActiveEventKeys, getCachedMatches, getAllPoolSummaries } from "@/db/bets";
+import { getAllSeasonEvents } from "@/lib/tba";
 import { EventsList } from "@/components/events-list";
-import type { MatchCache } from "@/lib/types";
 
 export default async function EventsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const eventKeys = await getActiveEventKeys();
-  const poolMap = await getAllPoolSummaries();
+  const [eventKeys, poolMap, allTbaEvents] = await Promise.all([
+    getActiveEventKeys(),
+    getAllPoolSummaries(),
+    getAllSeasonEvents(),
+  ]);
 
-  // Build event summaries
+  // Build event summaries from cached data
   const eventSummaries: {
     key: string;
     name: string;
@@ -60,13 +63,24 @@ export default async function EventsPage() {
     return aTime.localeCompare(bTime);
   });
 
+  // Build list of TBA events not yet synced
+  const syncedKeys = new Set(eventKeys);
+  const unsyncedEvents = allTbaEvents
+    .filter((e) => !syncedKeys.has(e.key))
+    .map((e) => ({
+      key: e.key,
+      name: e.name,
+      startDate: e.start_date,
+      endDate: e.end_date,
+    }));
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-[18px] font-semibold text-[#e6edf3]">Events</h1>
         <p className="text-[12px] text-[#7d8590] mt-0.5">FRC events with match schedules</p>
       </div>
-      <EventsList events={eventSummaries} />
+      <EventsList events={eventSummaries} unsyncedEvents={unsyncedEvents} />
     </div>
   );
 }

@@ -19,6 +19,7 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
   const [amount, setAmount] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const totalPool = Object.values(pools).reduce((sum, p) => sum + p.pool, 0);
@@ -31,8 +32,10 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
 
   function handleSubmit() {
     if (!hasScores) return;
+    if (!confirm) { setConfirm(true); return; }
     setError(null);
     setSuccess(false);
+    setConfirm(false);
 
     const fd = new FormData();
     fd.set("marketId", market.id);
@@ -166,6 +169,13 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
 
             {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
             {success && <p className="text-[12px] text-[#22c55e]">Prediction placed!</p>}
+            {confirm && (
+              <div className="rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30 px-3 py-2">
+                <p className="text-[12px] text-[#f59e0b] font-medium">
+                  Predict {redScore}-{blueScore} for ${amount}? Click again to confirm.
+                </p>
+              </div>
+            )}
 
             <button
               onClick={handleSubmit}
@@ -179,6 +189,8 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
             >
               {isPending
                 ? "Placing..."
+                : confirm
+                ? "Confirm Prediction"
                 : hasScores
                 ? `Predict ${redScore} - ${blueScore}`
                 : "Enter both scores"}

@@ -16,6 +16,7 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const totalPool = Object.values(pools).reduce((sum, p) => sum + p.pool, 0);
@@ -35,8 +36,13 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
 
   function handleSubmit() {
     if (!selectedOption || !amount) return;
+    if (!confirm) {
+      setConfirm(true);
+      return;
+    }
     setError(null);
     setSuccess(false);
+    setConfirm(false);
 
     const fd = new FormData();
     fd.set("marketId", market.id);
@@ -194,7 +200,7 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
                 min="1"
                 max={balance}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => { setAmount(e.target.value); setConfirm(false); }}
                 placeholder="Amount"
                 className="w-full h-9 rounded-lg bg-[#0d1117] border border-[#21262d] pl-7 pr-3 text-[13px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none tabular-nums font-mono"
               />
@@ -204,7 +210,7 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
               disabled={isPending || !amount || parseInt(amount) < 1}
               className="h-9 px-4 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold transition-colors"
             >
-              {isPending ? "..." : "Bet"}
+              {isPending ? "..." : confirm ? "Confirm" : "Bet"}
             </button>
           </div>
 

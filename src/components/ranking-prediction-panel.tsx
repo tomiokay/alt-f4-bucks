@@ -19,6 +19,7 @@ export function RankingPredictionPanel({ market, pools, balance, qualPlayed = 0,
   const [amount, setAmount] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const rank = market.line ? Math.round(market.line) : "?";
@@ -69,8 +70,10 @@ export function RankingPredictionPanel({ market, pools, balance, qualPlayed = 0,
 
   function handleSubmit() {
     if (!selectedOption) return;
+    if (!confirm) { setConfirm(true); return; }
     setError(null);
     setSuccess(false);
+    setConfirm(false);
 
     const fd = new FormData();
     fd.set("marketId", market.id);
@@ -329,6 +332,13 @@ export function RankingPredictionPanel({ market, pools, balance, qualPlayed = 0,
 
             {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
             {success && <p className="text-[12px] text-[#22c55e]">Prediction placed!</p>}
+            {confirm && (
+              <div className="rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30 px-3 py-2">
+                <p className="text-[12px] text-[#f59e0b] font-medium">
+                  Bet ${amount} on this prediction? Click again to confirm.
+                </p>
+              </div>
+            )}
 
             <button
               onClick={handleSubmit}
@@ -342,6 +352,8 @@ export function RankingPredictionPanel({ market, pools, balance, qualPlayed = 0,
             >
               {isPending
                 ? "Placing..."
+                : confirm
+                ? "Confirm Bet"
                 : isLocked
                 ? "Market locked"
                 : selectedOption

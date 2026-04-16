@@ -27,6 +27,7 @@ export default async function EventsPage() {
     upcomingMatches: number;
     totalVolume: number;
     startTime: string | null;
+    endTime: string | null;
     isFavorite: boolean;
   }[] = [];
 
@@ -44,9 +45,11 @@ export default async function EventsPage() {
       if (pool) volume += pool.total_pool;
     }
 
-    const earliest = matches
+    const sorted = matches
       .filter((m) => m.scheduled_time)
-      .sort((a, b) => (a.scheduled_time ?? "").localeCompare(b.scheduled_time ?? ""))[0];
+      .sort((a, b) => (a.scheduled_time ?? "").localeCompare(b.scheduled_time ?? ""));
+    const earliest = sorted[0];
+    const latest = sorted[sorted.length - 1];
 
     eventSummaries.push({
       key: ek,
@@ -56,6 +59,7 @@ export default async function EventsPage() {
       upcomingMatches: upcoming.length,
       totalVolume: volume,
       startTime: earliest?.scheduled_time ?? null,
+      endTime: latest?.scheduled_time ?? null,
       isFavorite: favoriteSet.has(ek),
     });
   }
@@ -71,12 +75,17 @@ export default async function EventsPage() {
     return aTime.localeCompare(bTime);
   });
 
-  // Filter "All" tab: show favorites + synced events from last 2 weeks
+  // Filter "All" tab: show favorites + synced events from last 2 weeks (using end time for completed events)
   const now = new Date();
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
-  const recentEvents = eventSummaries.filter((e) =>
-    e.isFavorite || (e.startTime && e.startTime >= twoWeeksAgo) || e.upcomingMatches > 0
-  );
+  const recentEvents = eventSummaries.filter((e) => {
+    if (e.isFavorite) return true;
+    if (e.upcomingMatches > 0) return true;
+    // For completed events, check if the last match was within 2 weeks
+    const latestTime = e.endTime ?? e.startTime;
+    if (latestTime && latestTime >= twoWeeksAgo) return true;
+    return false;
+  });
 
   // Show unsynced TBA events starting in the next 3 days
   const syncedKeys = new Set(eventKeys);

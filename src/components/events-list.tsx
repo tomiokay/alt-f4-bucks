@@ -181,23 +181,13 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
             </div>
           )}
 
-      {/* TBA events without match schedules yet */}
-      {(filter === "upcoming" || filter === "all" || filter === "live") && upcomingTbaEvents.length > 0 && (
+      {/* TBA events without match schedules yet — only show in all/upcoming */}
+      {(filter === "upcoming" || filter === "all") && upcomingTbaEvents.length > 0 && (
         <div className="space-y-3 mt-6">
           <h3 className="text-[14px] font-medium text-[#7d8590]">No match schedule yet</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {upcomingTbaEvents
-              .filter((e) => {
-                if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.key.includes(search.toLowerCase())) return false;
-                const now = new Date();
-                const start = new Date(e.startDate);
-                const end = new Date(e.endDate + "T23:59:59");
-                const isLive = start <= now && end >= now;
-                const isPast = end < now;
-                if (filter === "live") return isLive;
-                if (filter === "upcoming") return !isPast && !isLive;
-                return true; // "all"
-              })
+              .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.key.includes(search.toLowerCase()))
               .map((event) => (
                 <div
                   key={event.key}

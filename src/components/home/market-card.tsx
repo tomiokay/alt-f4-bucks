@@ -125,13 +125,44 @@ export function MarketCard({ item, onBetRed, onBetBlue }: Props) {
         </div>
       </div>
 
+      {/* Odds bar */}
+      {!match.is_complete && odds.totalPool > 0 && (
+        <div className="mt-3 flex h-1.5 rounded-full overflow-hidden bg-[#21262d]">
+          <div
+            className="bg-[#ef4444] transition-all duration-500"
+            style={{ width: `${odds.redPct}%` }}
+          />
+          <div
+            className="bg-[#3b82f6] transition-all duration-500"
+            style={{ width: `${odds.bluePct}%` }}
+          />
+        </div>
+      )}
+
+      {/* Predict score link */}
+      {!match.is_complete && (
+        <div className="mt-2.5">
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#f59e0b] hover:text-[#fbbf24] transition-colors">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Predict Score
+          </span>
+        </div>
+      )}
+
       {/* Footer */}
-      <div className="mt-3 flex items-center gap-3 text-[11px] text-[#484f58]">
+      <div className="mt-2 flex items-center gap-3 text-[11px] text-[#484f58]">
         {odds.totalPool > 0 && (
           <span>${odds.totalPool.toLocaleString()} Vol.</span>
         )}
         {(odds.redBettors + odds.blueBettors) > 0 && (
-          <span>{odds.redBettors + odds.blueBettors} traders</span>
+          <span>{odds.redBettors + odds.blueBettors} betters</span>
+        )}
+        {match.scheduled_time && !match.is_complete && (
+          <span className="ml-auto">
+            {new Date(match.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </span>
         )}
       </div>
     </Link>

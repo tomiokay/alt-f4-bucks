@@ -104,13 +104,16 @@ async function HomeContent() {
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
 
   const carouselPredMarkets = allPredMarkets.filter((m) => {
-    if (m.status !== "open" || m.match_key !== null) return false;
-    if (m.type !== "event_winner" && m.type !== "ranking_top1" && m.type !== "ranking_position") return false;
+    if (m.status !== "open") return false;
     // Only show in carousel if someone has bet on it
     const marketPools = allPredPools[m.id];
     if (!marketPools) return false;
     const totalPool = Object.values(marketPools).reduce((sum, p) => sum + p.pool, 0);
-    return totalPool > 0;
+    if (totalPool <= 0) return false;
+    // Include event-level markets and score predictions with enough bets
+    if (m.match_key === null && (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")) return true;
+    if (m.type === "score_prediction" && totalPool >= 50) return true;
+    return false;
   });
 
   const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();

@@ -119,11 +119,18 @@ function buildHighlights(allCompleted: EnrichedMatch[]): Highlight[] {
 
   // Deduplicate by match key, keep first occurrence (priority order above)
   const seen = new Set<string>();
-  return highlights.filter((h) => {
+  const deduped = highlights.filter((h) => {
     const key = `${h.match.match.match_key}:${h.tag}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
+  });
+
+  // Sort by most recent first
+  return deduped.sort((a, b) => {
+    const aTime = a.match.match.actual_time ?? a.match.match.scheduled_time ?? "";
+    const bTime = b.match.match.actual_time ?? b.match.match.scheduled_time ?? "";
+    return bTime.localeCompare(aTime);
   });
 }
 

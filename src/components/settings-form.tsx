@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { updateProfile, changePassword } from "@/app/actions/settings";
+import { useConfirmBets } from "@/lib/use-confirm-bets";
 import type { Profile } from "@/lib/types";
 
 type Props = {
@@ -18,6 +19,7 @@ export function SettingsForm({ profile }: Props) {
   const [pwLoading, setPwLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
 
+  const [confirmBets, setConfirmBets] = useConfirmBets();
   const profileRef = useRef(false);
   const pwRef = useRef(false);
 
@@ -160,6 +162,30 @@ export function SettingsForm({ profile }: Props) {
             {pwLoading ? "Changing..." : "Change Password"}
           </button>
         </form>
+      </div>
+      {/* Betting preferences */}
+      <div className="rounded-xl bg-[#161b22] border border-[#21262d] p-5">
+        <h2 className="text-[15px] font-semibold text-[#e6edf3] mb-4">Betting</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-[13px] text-[#e6edf3]">Confirm before placing bets</span>
+            <p className="text-[11px] text-[#484f58] mt-0.5">
+              Show a confirmation step before placing any bet or prediction
+            </p>
+          </div>
+          <button
+            onClick={() => setConfirmBets(!confirmBets)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${
+              confirmBets ? "bg-[#22c55e]" : "bg-[#21262d]"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                confirmBets ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { isConfirmEnabled } from "@/lib/use-confirm-bets";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -55,7 +56,7 @@ export function BetSlip({ match, side, odds, balance, open, onOpenChange, existi
 
   async function handleSubmit() {
     // Show confirmation first
-    if (!confirming) {
+    if (!confirming && isConfirmEnabled()) {
       setConfirming(true);
       return;
     }

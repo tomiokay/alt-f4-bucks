@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { placePoolBet } from "@/app/actions/bets";
 import { potentialPayout } from "@/lib/odds";
+import { isConfirmEnabled } from "@/lib/use-confirm-bets";
 import type { MatchCache, MatchOdds } from "@/lib/types";
 
 type Props = {
@@ -31,7 +32,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
   const presets = [1, 5, 10, 50, 100].filter((p) => p <= balance);
 
   async function handleSubmit() {
-    if (!confirm) {
+    if (!confirm && isConfirmEnabled()) {
       setConfirm(true);
       return;
     }

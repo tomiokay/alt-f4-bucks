@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { placePredictionBet } from "@/app/actions/predictions";
+import { isConfirmEnabled } from "@/lib/use-confirm-bets";
 import type { PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
 type Props = {
@@ -36,7 +37,7 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
 
   function handleSubmit() {
     if (!selectedOption || !amount) return;
-    if (!confirm) {
+    if (!confirm && isConfirmEnabled()) {
       setConfirm(true);
       return;
     }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { placeScorePrediction } from "@/app/actions/predictions";
+import { isConfirmEnabled } from "@/lib/use-confirm-bets";
 import type { PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
 type Props = {
@@ -32,7 +33,7 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
 
   function handleSubmit() {
     if (!hasScores) return;
-    if (!confirm) { setConfirm(true); return; }
+    if (!confirm && isConfirmEnabled()) { setConfirm(true); return; }
     setError(null);
     setSuccess(false);
     setConfirm(false);

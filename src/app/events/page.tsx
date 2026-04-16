@@ -113,6 +113,7 @@ export default async function EventsPage() {
         events={eventSummaries}
         allEvents={eventSummaries}
         upcomingTbaEvents={upcomingTbaEvents}
+        favoriteKeys={favoriteKeys}
       />
     </div>
   );

@@ -43,6 +43,7 @@ type Props = {
   events: EventSummary[];
   allEvents: EventSummary[];
   upcomingTbaEvents?: UpcomingTbaEvent[];
+  favoriteKeys?: string[];
 };
 
 function formatDate(time: string | null): string {
@@ -63,13 +64,14 @@ function getStatus(e: EventSummary): "live" | "upcoming" | "completed" {
   return "upcoming";
 }
 
-export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props) {
+export function EventsList({ events, allEvents, upcomingTbaEvents = [], favoriteKeys = [] }: Props) {
   const [filter, setFilter] = useState<"all" | "live" | "upcoming" | "completed" | "favorites">("all");
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [favorites, setFavorites] = useState<Set<string>>(
     new Set([
       ...allEvents.filter((e) => e.isFavorite).map((e) => e.key),
+      ...favoriteKeys,
     ])
   );
   const router = useRouter();

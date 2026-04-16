@@ -95,13 +95,25 @@ export async function getMatchByKey(matchKey: string): Promise<MatchCache | null
 export async function getActiveEventKeys(): Promise<string[]> {
   const { createServiceClient } = await import("@/lib/supabase/server");
   const supabase = await createServiceClient();
-  // Fetch all event keys — need enough rows to cover all events
-  const { data } = await supabase
-    .from("match_cache")
-    .select("event_key")
-    .limit(20000);
 
-  const keys = new Set((data ?? []).map((d: { event_key: string }) => d.event_key));
+  // Paginate to get ALL event keys (Supabase caps at ~1000 per request)
+  const keys = new Set<string>();
+  let page = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data } = await supabase
+      .from("match_cache")
+      .select("event_key")
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (!data || data.length === 0) break;
+    for (const d of data as { event_key: string }[]) {
+      keys.add(d.event_key);
+    }
+    if (data.length < PAGE_SIZE) break;
+    page++;
+  }
+
   return Array.from(keys);
 }
 
@@ -109,14 +121,25 @@ export async function getAllCachedMatches(): Promise<MatchCache[]> {
   const { createServiceClient } = await import("@/lib/supabase/server");
   const supabase = await createServiceClient();
 
-  // Fetch most recent matches first (descending), enough to cover recent events
-  const { data } = await supabase
-    .from("match_cache")
-    .select("*")
-    .order("scheduled_time", { ascending: false, nullsFirst: false })
-    .limit(5000);
+  // Fetch most recent matches — paginate to get enough
+  const results: MatchCache[] = [];
+  let page = 0;
+  const PAGE_SIZE = 1000;
+  // Only need recent matches for home page, fetch up to 5 pages (5000 matches)
+  while (page < 5) {
+    const { data } = await supabase
+      .from("match_cache")
+      .select("*")
+      .order("scheduled_time", { ascending: false, nullsFirst: false })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-  return (data ?? []) as MatchCache[];
+    if (!data || data.length === 0) break;
+    results.push(...(data as MatchCache[]));
+    if (data.length < PAGE_SIZE) break;
+    page++;
+  }
+
+  return results;
 }
 
 export async function getEventList(): Promise<{ key: string; name: string }[]> {

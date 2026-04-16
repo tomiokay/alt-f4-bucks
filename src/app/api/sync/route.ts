@@ -46,9 +46,15 @@ export async function GET(request: NextRequest) {
         onConflict: "match_key",
       });
 
-      if (!error) totalSynced += rows.length;
-    } catch {
+      if (!error) {
+        totalSynced += rows.length;
+      } else {
+        fetchErrors++;
+        console.error("[sync] upsert error for", eventKey, error.message);
+      }
+    } catch (e) {
       fetchErrors++;
+      console.error("[sync] error for event", eventKey, e);
     }
   }
 

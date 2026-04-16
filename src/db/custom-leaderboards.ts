@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import type { CustomLeaderboard, LeaderboardEntry } from "@/lib/types";
 
 export async function getUserLeaderboards(userId: string): Promise<(CustomLeaderboard & { member_count: number })[]> {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
 
   // Get leaderboard IDs user is a member of
   const { data: memberships } = await supabase
@@ -37,7 +37,7 @@ export async function getUserLeaderboards(userId: string): Promise<(CustomLeader
 }
 
 export async function getLeaderboardMembers(leaderboardId: string): Promise<LeaderboardEntry[]> {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
 
   // Get member user IDs
   const { data: members } = await supabase
@@ -60,7 +60,7 @@ export async function getLeaderboardMembers(leaderboardId: string): Promise<Lead
 }
 
 export async function getLeaderboardById(id: string): Promise<CustomLeaderboard | null> {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
   const { data } = await supabase
     .from("custom_leaderboards")
     .select("*")

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getCurrentProfile } from "@/db/profiles";
 import { getUserBalance } from "@/db/transactions";
 import {
@@ -25,10 +26,30 @@ export type EnrichedMatch = {
   pool: PoolSummary | null;
 };
 
-export default async function HomePage() {
+function HomeSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex gap-6">
+        <div className="flex-1 min-w-0 space-y-6">
+          <div className="rounded-xl bg-[#161b22] h-[340px]" />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl bg-[#161b22] h-[160px]" />
+            ))}
+          </div>
+        </div>
+        <div className="hidden lg:block w-[320px] shrink-0 space-y-5">
+          <div className="rounded-xl bg-[#161b22] h-[200px]" />
+          <div className="rounded-xl bg-[#161b22] h-[150px]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function HomeContent() {
   const profile = await getCurrentProfile();
 
-  // Single parallel batch — all data in one round trip
   const [balance, allMatches, poolMap, allPredMarkets, allPredPoolsMap] = await Promise.all([
     profile ? getUserBalance(profile.id) : Promise.resolve(0),
     getAllCachedMatches(),
@@ -42,7 +63,6 @@ export default async function HomePage() {
     pools[key] = val;
   }
 
-  // Convert prediction pools
   const allPredPools: Record<string, Record<string, PredictionPoolOption>> = {};
   for (const [mId, optMap] of allPredPoolsMap) {
     const opts: Record<string, PredictionPoolOption> = {};
@@ -52,7 +72,6 @@ export default async function HomePage() {
     allPredPools[mId] = opts;
   }
 
-  // Enrich matches
   const enriched: EnrichedMatch[] = allMatches.map((match) => {
     const pool = pools[match.match_key] ?? null;
     const odds = calculateOdds(pool, null);
@@ -77,11 +96,8 @@ export default async function HomePage() {
   );
 
   const featured = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool)[0] ?? null;
-
-  // Only fetch odds history for the one featured match (cheap single query)
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
 
-  // Carousel prediction markets: open, event-level
   const carouselPredMarkets = allPredMarkets.filter(
     (m) => m.status === "open" && m.match_key === null &&
     (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")
@@ -122,39 +138,45 @@ export default async function HomePage() {
   });
 
   return (
-    <div className="space-y-0">
-      <AutoSync />
-      <div className="flex gap-6">
-        <div className="flex-1 min-w-0 space-y-6">
-          <FeaturedCarousel
-            featured={featured}
-            pools={pools}
-            predictions={{}}
-            balance={balance}
-            oddsHistory={featuredHistory}
-            predictionMarkets={carouselPredMarkets}
-            predictionPools={allPredPools}
-          />
-          <TrendingMarkets
-            matches={upcoming}
-            completed={completed}
-            pools={pools}
-            balance={balance}
-            predictionMarkets={allPredMarkets}
-            predictionPools={allPredPools}
-          />
-          {/* Breaking news + hot topics — mobile (below markets) */}
-          <div className="lg:hidden space-y-5">
-            <BreakingNews items={breaking} allCompleted={completed} />
-            <HotTopics topics={hotTopics} />
-          </div>
-        </div>
-        {/* Sidebar — desktop */}
-        <div className="hidden lg:block w-[320px] shrink-0 space-y-5">
+    <div className="flex gap-6">
+      <div className="flex-1 min-w-0 space-y-6">
+        <FeaturedCarousel
+          featured={featured}
+          pools={pools}
+          predictions={{}}
+          balance={balance}
+          oddsHistory={featuredHistory}
+          predictionMarkets={carouselPredMarkets}
+          predictionPools={allPredPools}
+        />
+        <TrendingMarkets
+          matches={upcoming}
+          completed={completed}
+          pools={pools}
+          balance={balance}
+          predictionMarkets={allPredMarkets}
+          predictionPools={allPredPools}
+        />
+        <div className="lg:hidden space-y-5">
           <BreakingNews items={breaking} allCompleted={completed} />
           <HotTopics topics={hotTopics} />
         </div>
       </div>
+      <div className="hidden lg:block w-[320px] shrink-0 space-y-5">
+        <BreakingNews items={breaking} allCompleted={completed} />
+        <HotTopics topics={hotTopics} />
+      </div>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <div className="space-y-0">
+      <AutoSync />
+      <Suspense fallback={<HomeSkeleton />}>
+        <HomeContent />
+      </Suspense>
     </div>
   );
 }

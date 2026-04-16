@@ -135,14 +135,24 @@ export default function LoginPage() {
               </form>
             ) : (
               <form action={handleSignup} className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[12px] text-[#7d8590]">Display name</label>
-                  <input
-                    name="displayName"
-                    required
-                    placeholder="Your name"
-                    className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
-                  />
+                <div className="grid grid-cols-[1fr_auto] gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] text-[#7d8590]">Display name</label>
+                    <input
+                      name="displayName"
+                      required
+                      placeholder="Your name"
+                      className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] text-[#7d8590]">Team #</label>
+                    <input
+                      name="teamNumber"
+                      placeholder="7558"
+                      className="w-[80px] h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[12px] text-[#7d8590]">Email</label>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setBanStatus } from "@/app/actions/settings";
+import { setBanStatus, adminRenameUser } from "@/app/actions/settings";
 import { cn } from "@/lib/utils";
+import { Pencil, X, Check } from "lucide-react";
 import type { Profile } from "@/lib/types";
 
 type Props = {
@@ -18,6 +19,11 @@ export function UserManagement({ members, currentUserId }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [names, setNames] = useState<Record<string, string>>(
+    Object.fromEntries(members.map((m) => [m.id, m.display_name]))
+  );
 
   const filtered = members.filter(
     (m) =>
@@ -37,6 +43,32 @@ export function UserManagement({ members, currentUserId }: Props) {
         setStatuses((s) => ({ ...s, [member.id]: newBanned }));
         setErrors((e) => { const n = { ...e }; delete n[member.id]; return n; });
       }
+    });
+  }
+
+  function startRename(member: Profile) {
+    setEditingId(member.id);
+    setEditName(names[member.id] || member.display_name);
+  }
+
+  function cancelRename() {
+    setEditingId(null);
+    setEditName("");
+  }
+
+  function submitRename(memberId: string) {
+    setPendingId(memberId);
+    startTransition(async () => {
+      const result = await adminRenameUser(memberId, editName);
+      setPendingId(null);
+      if (result.error) {
+        setErrors((e) => ({ ...e, [memberId]: result.error! }));
+      } else {
+        setNames((n) => ({ ...n, [memberId]: editName.trim() }));
+        setErrors((e) => { const n = { ...e }; delete n[memberId]; return n; });
+      }
+      setEditingId(null);
+      setEditName("");
     });
   }
 
@@ -95,6 +127,26 @@ export function UserManagement({ members, currentUserId }: Props) {
                   {member.display_name[0]?.toUpperCase()}
                 </div>
                 <div className="min-w-0">
+                  {editingId === member.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") submitRename(member.id);
+                          if (e.key === "Escape") cancelRename();
+                        }}
+                        autoFocus
+                        className="h-6 w-[140px] rounded bg-[#0d1117] border border-[#388bfd] px-2 text-[12px] text-[#e6edf3] focus:outline-none"
+                      />
+                      <button onClick={() => submitRename(member.id)} className="text-[#22c55e] hover:text-[#16a34a]">
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={cancelRename} className="text-[#7d8590] hover:text-[#e6edf3]">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
                   <div className="flex items-center gap-1.5">
                     <span
                       className={cn(
@@ -102,8 +154,13 @@ export function UserManagement({ members, currentUserId }: Props) {
                         isBanned ? "text-[#7d8590] line-through" : "text-[#e6edf3]"
                       )}
                     >
-                      {member.display_name}
+                      {names[member.id] || member.display_name}
                     </span>
+                    {!isSelf && (
+                      <button onClick={() => startRename(member)} className="text-[#484f58] hover:text-[#7d8590]">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
                     {member.role !== "member" && (
                       <span className="text-[10px] text-[#484f58] shrink-0">
                         {member.role}
@@ -115,6 +172,7 @@ export function UserManagement({ members, currentUserId }: Props) {
                       </span>
                     )}
                   </div>
+                  )}
                   {member.team_number && (
                     <span className="text-[11px] text-[#484f58]">
                       Team {member.team_number}

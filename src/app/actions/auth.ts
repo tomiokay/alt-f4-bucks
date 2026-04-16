@@ -12,6 +12,7 @@ const loginSchema = z.object({
 
 const signupSchema = loginSchema.extend({
   displayName: z.string().min(1, "Display name is required").max(50),
+  teamNumber: z.string().max(10).optional(),
 });
 
 /** Ensure user has received their welcome bonus */
@@ -96,6 +97,7 @@ export async function signup(formData: FormData) {
     email: formData.get("email"),
     password: formData.get("password"),
     displayName: formData.get("displayName"),
+    teamNumber: (formData.get("teamNumber") as string)?.trim() || undefined,
   });
 
   if (!parsed.success) {
@@ -120,9 +122,17 @@ export async function signup(formData: FormData) {
     return { error: error.message };
   }
 
-  // Grant welcome bonus immediately
+  // Grant welcome bonus and save team number
   if (data.user) {
     await ensureWelcomeBonus(data.user.id);
+
+    if (parsed.data.teamNumber) {
+      const service = await createServiceClient();
+      await service
+        .from("profiles")
+        .update({ team_number: parsed.data.teamNumber })
+        .eq("id", data.user.id);
+    }
   }
 
   redirect("/dashboard");

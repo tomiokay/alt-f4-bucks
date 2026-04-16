@@ -167,6 +167,45 @@ export async function adminBulkSetTeamNumber(formData: FormData) {
   return { success: true, count: userIds.length };
 }
 
+// Admin: force rename a user
+export async function adminRenameUser(userId: string, newName: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["manager", "admin"].includes(profile.role)) {
+    return { error: "Not authorized" };
+  }
+
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed.length > 50) return { error: "Name must be 1-50 characters" };
+
+  if (containsProfanity(trimmed)) {
+    return { error: "Name contains inappropriate language." };
+  }
+
+  const service = await createServiceClient();
+  const { error } = await service
+    .from("profiles")
+    .update({ display_name: trimmed })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager");
+  revalidatePath("/leaderboard");
+  return { success: true };
+}
+
 // Admin: ban or unban a user
 export async function setBanStatus(userId: string, banned: boolean) {
   const supabase = await createClient();

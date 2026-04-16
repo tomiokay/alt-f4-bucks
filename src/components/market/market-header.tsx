@@ -44,9 +44,9 @@ export function MarketHeader({ match, odds }: Props) {
               {match.event_name}
             </span>
             {(() => {
-              const scheduled = match.scheduled_time ? new Date(match.scheduled_time) : null;
+              const cutoff = match.scheduled_time ? new Date(new Date(match.scheduled_time).getTime() - 5 * 60 * 1000) : null;
               const now = new Date();
-              const isPast = scheduled && scheduled < now;
+              const isPast = cutoff && cutoff < now;
               if (match.is_complete) {
                 return (
                   <span className="rounded bg-[#16332a] px-2 py-0.5 text-[10px] font-semibold text-[#22c55e]">

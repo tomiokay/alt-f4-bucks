@@ -119,7 +119,7 @@ export type CommentWithProfile = Comment & {
   replies?: CommentWithProfile[];
 };
 
-export type NotificationType = "bet_won" | "bet_lost" | "bet_refund" | "comment_reply" | "welcome";
+export type NotificationType = "bet_won" | "bet_lost" | "bet_refund" | "comment_reply" | "welcome" | "leaderboard_invite";
 
 export type Notification = {
   id: string;
@@ -176,6 +176,22 @@ export type PredictionPoolOption = {
   option_key: string;
   pool: number;
   bettors: number;
+};
+
+// --- Custom Leaderboards ---
+
+export type CustomLeaderboard = {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+};
+
+export type CustomLeaderboardMember = {
+  id: string;
+  leaderboard_id: string;
+  user_id: string;
+  joined_at: string;
 };
 
 export type OddsHistoryPoint = {

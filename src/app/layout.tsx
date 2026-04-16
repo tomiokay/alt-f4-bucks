@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Nav } from "@/components/nav";
@@ -22,13 +23,7 @@ export const metadata: Metadata = {
   description: "FRC Team 7558 prediction market.",
 };
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const profile = await getCurrentProfile();
-
+async function NavWithData({ profile }: { profile: import("@/lib/types").Profile | null }) {
   const [balance, notifications, unreadCount] = await Promise.all([
     profile ? getUserBalance(profile.id) : Promise.resolve(0),
     profile ? getUserNotifications(profile.id, 15) : Promise.resolve([]),
@@ -36,16 +31,30 @@ export default async function RootLayout({
   ]);
 
   return (
+    <Nav
+      profile={profile}
+      balance={balance}
+      notifications={notifications}
+      unreadCount={unreadCount}
+    />
+  );
+}
+
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const profile = await getCurrentProfile();
+
+  return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <Nav
-          profile={profile}
-          balance={balance}
-          notifications={notifications}
-          unreadCount={unreadCount}
-        />
+        <Suspense fallback={<Nav profile={profile} />}>
+          <NavWithData profile={profile} />
+        </Suspense>
         <main className="mx-auto max-w-7xl px-4 py-6">
           {profile?.banned ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">

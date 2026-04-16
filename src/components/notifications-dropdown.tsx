@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Trophy, MessageSquare, Gift, AlertTriangle, Check } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Bell, Trophy, MessageSquare, Gift, AlertTriangle, Check, Users } from "lucide-react";
 import { markAllRead } from "@/app/actions/notifications";
+import { joinLeaderboard } from "@/app/actions/custom-leaderboards";
 import { useRouter } from "next/navigation";
 import type { Notification } from "@/lib/types";
 
@@ -28,6 +29,7 @@ const ICONS: Record<string, typeof Trophy> = {
   bet_refund: Gift,
   comment_reply: MessageSquare,
   welcome: Gift,
+  leaderboard_invite: Users,
 };
 
 const COLORS: Record<string, string> = {
@@ -36,6 +38,7 @@ const COLORS: Record<string, string> = {
   bet_refund: "text-[#f59e0b]",
   comment_reply: "text-[#3b82f6]",
   welcome: "text-[#22c55e]",
+  leaderboard_invite: "text-[#a855f7]",
 };
 
 type GroupedNotification = {
@@ -46,6 +49,7 @@ type GroupedNotification = {
   message: string;
   read: boolean;
   created_at: string;
+  meta?: Record<string, unknown>;
 };
 
 function groupNotifications(notifications: Notification[]): GroupedNotification[] {
@@ -74,6 +78,7 @@ function groupNotifications(notifications: Notification[]): GroupedNotification[
         message: n.message,
         read: n.read,
         created_at: n.created_at,
+        meta: n.meta,
       });
     }
   }
@@ -83,6 +88,8 @@ function groupNotifications(notifications: Notification[]): GroupedNotification[
 
 export function NotificationsDropdown({ notifications, unreadCount }: Props) {
   const [open, setOpen] = useState(false);
+  const [joinedBoards, setJoinedBoards] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   const grouped = groupNotifications(notifications);
@@ -158,6 +165,24 @@ export function NotificationsDropdown({ notifications, unreadCount }: Props) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] text-[#e6edf3] leading-snug">{message}</p>
+                        {g.type === "leaderboard_invite" && typeof g.meta?.leaderboard_id === "string" && (
+                          <button
+                            onClick={() => {
+                              const boardId = g.meta!.leaderboard_id as string;
+                              startTransition(async () => {
+                                const res = await joinLeaderboard(boardId);
+                                if (!res.error) {
+                                  setJoinedBoards((s) => new Set([...s, boardId]));
+                                  router.refresh();
+                                }
+                              });
+                            }}
+                            disabled={isPending || joinedBoards.has(g.meta.leaderboard_id as string)}
+                            className="mt-1.5 rounded-md bg-[#a855f7]/10 px-3 py-1 text-[11px] font-semibold text-[#a855f7] hover:bg-[#a855f7]/20 disabled:opacity-50 transition-colors"
+                          >
+                            {joinedBoards.has(g.meta.leaderboard_id as string) ? "Joined!" : "Join Leaderboard"}
+                          </button>
+                        )}
                         <p className="text-[11px] text-[#484f58] mt-0.5">{timeAgo(g.created_at)}</p>
                       </div>
                       {!g.read && (

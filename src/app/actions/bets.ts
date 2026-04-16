@@ -33,6 +33,24 @@ export async function placePoolBet(formData: FormData) {
     return { error: parsed.error.issues[0].message };
   }
 
+  // Check if betting is closed (5 minutes before scheduled time)
+  const { data: match } = await supabase
+    .from("match_cache")
+    .select("scheduled_time, is_complete")
+    .eq("match_key", parsed.data.matchKey)
+    .single();
+
+  if (match?.is_complete) {
+    return { error: "This match has already been played." };
+  }
+
+  if (match?.scheduled_time) {
+    const cutoff = new Date(match.scheduled_time).getTime() - 5 * 60 * 1000;
+    if (Date.now() >= cutoff) {
+      return { error: "Betting closes 5 minutes before match time." };
+    }
+  }
+
   const { data, error } = await supabase.rpc("place_pool_bet", {
     p_user_id: user.id,
     p_match_key: parsed.data.matchKey,

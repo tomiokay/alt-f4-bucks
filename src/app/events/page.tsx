@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/db/profiles";
 import { getAllPoolSummaries } from "@/db/bets";
@@ -6,19 +7,50 @@ import { getUserFavoriteEvents } from "@/app/actions/favorites";
 import { EventsList } from "@/components/events-list";
 import { createServiceClient } from "@/lib/supabase/server";
 
+function EventsSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="flex gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-8 w-20 bg-[#161b22] rounded-md" />
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-xl bg-[#161b22] h-[140px]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default async function EventsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-[18px] font-semibold text-[#e6edf3]">Events</h1>
+        <p className="text-[12px] text-[#7d8590] mt-0.5">FRC events with match schedules</p>
+      </div>
+      <Suspense fallback={<EventsSkeleton />}>
+        <EventsContent userId={profile.id} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function EventsContent({ userId }: { userId: string }) {
   const service = await createServiceClient();
 
   const [poolMap, favoriteKeys, tbaEvents] = await Promise.all([
     getAllPoolSummaries(),
-    getUserFavoriteEvents(profile.id),
+    getUserFavoriteEvents(userId),
     getCurrentEvents(),
   ]);
 
-  // Paginate to get ALL matches (Supabase caps at ~1000 per request)
+  // Paginate to get ALL matches
   let allMatches: { event_key: string; event_name: string; is_complete: boolean; scheduled_time: string | null }[] = [];
   let page = 0;
   const PAGE_SIZE = 1000;
@@ -83,14 +115,13 @@ export default async function EventsPage() {
     return a.name.localeCompare(b.name);
   });
 
-  // Unsynced TBA events: next 3 days OR favorited
+  // Unsynced TBA events in next 3 days or favorited
   const syncedKeys = new Set(eventStats.keys());
   const nowDate = new Date();
   const threeDaysFromNow = new Date(nowDate.getTime() + 3 * 24 * 60 * 60 * 1000);
   const upcomingTbaEvents = tbaEvents
     .filter((e) => {
       if (syncedKeys.has(e.key)) return false;
-      // Always show favorited events
       if (favoriteSet.has(e.key)) return true;
       const start = new Date(e.start_date);
       const end = new Date(e.end_date + "T23:59:59");
@@ -104,17 +135,11 @@ export default async function EventsPage() {
     }));
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-[18px] font-semibold text-[#e6edf3]">Events</h1>
-        <p className="text-[12px] text-[#7d8590] mt-0.5">FRC events with match schedules</p>
-      </div>
-      <EventsList
-        events={eventSummaries}
-        allEvents={eventSummaries}
-        upcomingTbaEvents={upcomingTbaEvents}
-        favoriteKeys={favoriteKeys}
-      />
-    </div>
+    <EventsList
+      events={eventSummaries}
+      allEvents={eventSummaries}
+      upcomingTbaEvents={upcomingTbaEvents}
+      favoriteKeys={favoriteKeys}
+    />
   );
 }

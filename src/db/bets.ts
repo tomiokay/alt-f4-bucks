@@ -121,16 +121,18 @@ export async function getAllCachedMatches(): Promise<MatchCache[]> {
   const { createServiceClient } = await import("@/lib/supabase/server");
   const supabase = await createServiceClient();
 
-  // Fetch most recent matches — paginate to get enough
+  // Only need recent matches for home page — last 3 weeks max
+  const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+
   const results: MatchCache[] = [];
   let page = 0;
   const PAGE_SIZE = 1000;
-  // Only need recent matches for home page, fetch up to 5 pages (5000 matches)
-  while (page < 5) {
+  while (page < 3) {
     const { data } = await supabase
       .from("match_cache")
       .select("*")
-      .order("scheduled_time", { ascending: false, nullsFirst: false })
+      .gte("scheduled_time", threeWeeksAgo)
+      .order("scheduled_time", { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (!data || data.length === 0) break;

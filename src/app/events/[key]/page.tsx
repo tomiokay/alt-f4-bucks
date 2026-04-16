@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile } from "@/db/profiles";
@@ -20,13 +21,10 @@ export default async function EventPage({ params }: Props) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [matches, poolMap, balance, rankings, alliances, predictionsMap] = await Promise.all([
+  // Fast queries first — matches + balance
+  const [matches, balance] = await Promise.all([
     getCachedMatches(key),
-    getAllPoolSummaries(),
     getUserBalance(profile.id),
-    getEventRankings(key),
-    getEventAlliances(key),
-    getEventPredictions(key),
   ]);
 
   if (matches.length === 0) {
@@ -87,10 +85,71 @@ export default async function EventPage({ params }: Props) {
     );
   }
 
+  // Fast data for initial render
+  const poolMap = await getAllPoolSummaries();
   const pools: Record<string, PoolSummary> = {};
-  for (const [k, v] of poolMap) {
-    pools[k] = v;
-  }
+  for (const [k, v] of poolMap) pools[k] = v;
+
+  const eventName = matches[0].event_name;
+  const qualTotal = matches.filter((m) => m.comp_level === "qm").length;
+  const qualPlayed = matches.filter((m) => m.comp_level === "qm" && m.is_complete).length;
+
+  return (
+    <div>
+      <AutoSync />
+      <Suspense fallback={
+        <EventDetail
+          eventKey={key}
+          eventName={eventName}
+          matches={matches}
+          pools={pools}
+          balance={balance}
+          predictions={{}}
+          rankings={[]}
+          alliances={[]}
+          predictionMarkets={[]}
+          predictionPools={{}}
+          qualPlayed={qualPlayed}
+          qualTotal={qualTotal}
+        />
+      }>
+        <EventDetailWithData
+          eventKey={key}
+          eventName={eventName}
+          matches={matches}
+          pools={pools}
+          balance={balance}
+          qualPlayed={qualPlayed}
+          qualTotal={qualTotal}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+async function EventDetailWithData({
+  eventKey,
+  eventName,
+  matches,
+  pools,
+  balance,
+  qualPlayed,
+  qualTotal,
+}: {
+  eventKey: string;
+  eventName: string;
+  matches: Awaited<ReturnType<typeof getCachedMatches>>;
+  pools: Record<string, PoolSummary>;
+  balance: number;
+  qualPlayed: number;
+  qualTotal: number;
+}) {
+  // Slower queries in parallel
+  const [rankings, alliances, predictionsMap] = await Promise.all([
+    getEventRankings(eventKey),
+    getEventAlliances(eventKey),
+    getEventPredictions(eventKey),
+  ]);
 
   const predictions: Record<string, { redWinProb: number; blueWinProb: number }> = {};
   const fullPredictions: Record<string, { redPredScore?: number; bluePredScore?: number }> = {};
@@ -99,19 +158,17 @@ export default async function EventPage({ params }: Props) {
     fullPredictions[k] = { redPredScore: v.redPredScore, bluePredScore: v.bluePredScore };
   }
 
-  // Ensure markets exist before fetching (must await so they appear on first load)
+  // Ensure markets exist
   await Promise.allSettled([
-    ensureEventMarkets(key, matches, fullPredictions, rankings, alliances),
-    resolveScoreMarkets(key),
+    ensureEventMarkets(eventKey, matches, fullPredictions, rankings, alliances),
+    resolveScoreMarkets(eventKey),
   ]);
 
-  // Fetch prediction markets and pools
   const [predictionMarkets, predPoolsMap] = await Promise.all([
-    getEventPredictionMarkets(key),
-    getAllPredictionPools(key),
+    getEventPredictionMarkets(eventKey),
+    getAllPredictionPools(eventKey),
   ]);
 
-  // Convert Map<string, Map<...>> to serializable Record<string, Record<string, ...>>
   const predictionPools: Record<string, Record<string, PredictionPoolOption>> = {};
   for (const [mId, optMap] of predPoolsMap) {
     const opts: Record<string, PredictionPoolOption> = {};
@@ -121,27 +178,20 @@ export default async function EventPage({ params }: Props) {
     predictionPools[mId] = opts;
   }
 
-  const eventName = matches[0].event_name;
-  const qualTotal = matches.filter((m) => m.comp_level === "qm").length;
-  const qualPlayed = matches.filter((m) => m.comp_level === "qm" && m.is_complete).length;
-
   return (
-    <div>
-      <AutoSync />
-      <EventDetail
-        eventKey={key}
-        eventName={eventName}
-        matches={matches}
-        pools={pools}
-        balance={balance}
-        predictions={predictions}
-        rankings={rankings}
-        alliances={alliances}
-        predictionMarkets={predictionMarkets}
-        predictionPools={predictionPools}
-        qualPlayed={qualPlayed}
-        qualTotal={qualTotal}
-      />
-    </div>
+    <EventDetail
+      eventKey={eventKey}
+      eventName={eventName}
+      matches={matches}
+      pools={pools}
+      balance={balance}
+      predictions={predictions}
+      rankings={rankings}
+      alliances={alliances}
+      predictionMarkets={predictionMarkets}
+      predictionPools={predictionPools}
+      qualPlayed={qualPlayed}
+      qualTotal={qualTotal}
+    />
   );
 }

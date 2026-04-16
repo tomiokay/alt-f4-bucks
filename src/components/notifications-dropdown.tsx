@@ -99,10 +99,19 @@ export function NotificationsDropdown({ notifications, unreadCount }: Props) {
     router.refresh();
   }
 
+  function handleOpen() {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen && unreadCount > 0) {
+      // Auto mark as read when opening
+      markAllRead().then(() => router.refresh());
+    }
+  }
+
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleOpen}
         className="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[#161b22] transition-colors"
       >
         <Bell className="h-4 w-4 text-[#7d8590]" />
@@ -116,7 +125,7 @@ export function NotificationsDropdown({ notifications, unreadCount }: Props) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-10 z-50 w-[calc(100vw-2rem)] sm:w-[360px] max-w-[360px] rounded-xl bg-[#161b22] border border-[#30363d] shadow-2xl overflow-hidden">
+          <div className="fixed right-2 top-14 z-50 w-[calc(100vw-1rem)] sm:absolute sm:right-0 sm:top-10 sm:w-[360px] max-w-[360px] rounded-xl bg-[#161b22] border border-[#30363d] shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#21262d]">
               <h3 className="text-[14px] font-semibold text-[#e6edf3]">Notifications</h3>
               {unreadCount > 0 && (

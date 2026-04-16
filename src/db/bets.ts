@@ -135,12 +135,19 @@ export async function getEventList(): Promise<{ key: string; name: string }[]> {
 const SEARCH_ALIASES: Record<string, string[]> = {
   "quals": ["qm"],
   "qual": ["qm"],
+  "qualification": ["qm"],
+  "qualifications": ["qm"],
+  "match": ["qm"],
   "semis": ["sf"],
   "semi": ["sf"],
+  "semifinal": ["sf"],
+  "semifinals": ["sf"],
   "finals": ["f"],
   "final": ["f"],
-  "elims": ["sf", "f"],
+  "playoff": ["sf", "f"],
   "playoffs": ["sf", "f"],
+  "elims": ["sf", "f"],
+  "elimination": ["sf", "f"],
   "champs": ["championship"],
   "worlds": ["championship"],
   "dcmp": ["district championship"],
@@ -151,52 +158,108 @@ export async function searchMatches(query: string, limit = 100): Promise<MatchCa
   const supabase = await createClient();
   const q = query.toLowerCase().trim();
 
-  // Expand aliases
-  const aliases = SEARCH_ALIASES[q] ?? [];
-
   // Sanitize: remove characters that could break PostgREST filters
   const sanitize = (s: string) => s.replace(/[%(),.*]/g, "");
 
-  const searchTerms = [q, ...aliases].map(sanitize).filter(Boolean);
+  // Parse multi-word queries like "niagara qual 11" or "technology playoff 1"
+  const words = q.split(/\s+/);
+  let eventNameParts: string[] = [];
+  let compLevel: string | null = null;
+  let matchNumber: number | null = null;
+
+  for (const word of words) {
+    // Check if it's a number (match number)
+    if (/^\d+$/.test(word)) {
+      matchNumber = parseInt(word);
+      continue;
+    }
+    // Check if it's a comp level alias
+    const alias = SEARCH_ALIASES[word];
+    if (alias && alias.some(a => ["qm", "sf", "f"].includes(a))) {
+      compLevel = alias.find(a => ["qm", "sf", "f"].includes(a)) ?? null;
+      continue;
+    }
+    if (["qm", "sf", "f"].includes(word)) {
+      compLevel = word;
+      continue;
+    }
+    // Otherwise it's part of the event name
+    eventNameParts.push(word);
+  }
+
+  // Also expand full-query aliases for single-word searches
+  const fullAliases = SEARCH_ALIASES[q] ?? [];
 
   let results: MatchCache[] = [];
 
-  for (const term of searchTerms) {
-    // Use separate ilike calls to avoid filter injection
-    const { data: nameData } = await supabase
+  // Strategy 1: Multi-part query (e.g. "niagara qual 11")
+  if (eventNameParts.length > 0 && (compLevel || matchNumber !== null)) {
+    let builder = supabase
       .from("match_cache")
-      .select("*")
-      .ilike("event_name", `%${term}%`)
+      .select("*");
+
+    // Filter by event name
+    for (const part of eventNameParts) {
+      builder = builder.ilike("event_name", `%${sanitize(part)}%`);
+    }
+
+    // Filter by comp level
+    if (compLevel) {
+      builder = builder.eq("comp_level", compLevel);
+    }
+
+    // Filter by match number
+    if (matchNumber !== null) {
+      builder = builder.eq("match_number", matchNumber);
+    }
+
+    const { data } = await builder
       .order("scheduled_time", { ascending: true })
       .limit(limit);
 
-    const { data: keyData } = await supabase
-      .from("match_cache")
-      .select("*")
-      .ilike("match_key", `%${term}%`)
-      .order("scheduled_time", { ascending: true })
-      .limit(limit);
-
-    if (nameData) results.push(...(nameData as MatchCache[]));
-    if (keyData) results.push(...(keyData as MatchCache[]));
+    if (data) results.push(...(data as MatchCache[]));
   }
 
-  // Also try comp_level filter if query matches
-  if (["qm", "sf", "f"].includes(q) || aliases.some(a => ["qm", "sf", "f"].includes(a))) {
-    const compLevels = aliases.length > 0 ? aliases.filter(a => ["qm", "sf", "f"].includes(a)) : [q];
-    for (const cl of compLevels) {
-      const { data } = await supabase
+  // Strategy 2: Standard search (event name, match key, aliases)
+  if (results.length === 0) {
+    const searchTerms = [q, ...fullAliases].map(sanitize).filter(Boolean);
+
+    for (const term of searchTerms) {
+      const { data: nameData } = await supabase
         .from("match_cache")
         .select("*")
-        .eq("comp_level", cl)
+        .ilike("event_name", `%${term}%`)
         .order("scheduled_time", { ascending: true })
         .limit(limit);
 
-      if (data) results.push(...(data as MatchCache[]));
+      const { data: keyData } = await supabase
+        .from("match_cache")
+        .select("*")
+        .ilike("match_key", `%${term}%`)
+        .order("scheduled_time", { ascending: true })
+        .limit(limit);
+
+      if (nameData) results.push(...(nameData as MatchCache[]));
+      if (keyData) results.push(...(keyData as MatchCache[]));
+    }
+
+    // Also try comp_level filter if query matches
+    if (["qm", "sf", "f"].includes(q) || fullAliases.some(a => ["qm", "sf", "f"].includes(a))) {
+      const compLevels = fullAliases.length > 0 ? fullAliases.filter(a => ["qm", "sf", "f"].includes(a)) : [q];
+      for (const cl of compLevels) {
+        const { data } = await supabase
+          .from("match_cache")
+          .select("*")
+          .eq("comp_level", cl)
+          .order("scheduled_time", { ascending: true })
+          .limit(limit);
+
+        if (data) results.push(...(data as MatchCache[]));
+      }
     }
   }
 
-  // If still no results, try team number search
+  // Strategy 3: Team number search
   if (results.length === 0) {
     const { data: allData } = await supabase
       .from("match_cache")

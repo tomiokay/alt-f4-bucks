@@ -259,18 +259,24 @@ export async function searchMatches(query: string, limit = 100): Promise<MatchCa
     }
   }
 
-  // Strategy 3: Team number search
-  if (results.length === 0) {
-    const { data: allData } = await supabase
+  // Strategy 3: Team number search (using Postgres array contains)
+  if (results.length === 0 && /^\d+$/.test(q)) {
+    const { data: redData } = await supabase
       .from("match_cache")
       .select("*")
+      .contains("red_teams", [q])
       .order("scheduled_time", { ascending: true })
-      .limit(10000);
+      .limit(limit);
 
-    results = ((allData ?? []) as MatchCache[]).filter((m) =>
-      m.red_teams.some((t) => t.includes(q)) ||
-      m.blue_teams.some((t) => t.includes(q))
-    ).slice(0, limit);
+    const { data: blueData } = await supabase
+      .from("match_cache")
+      .select("*")
+      .contains("blue_teams", [q])
+      .order("scheduled_time", { ascending: true })
+      .limit(limit);
+
+    if (redData) results.push(...(redData as MatchCache[]));
+    if (blueData) results.push(...(blueData as MatchCache[]));
   }
 
   // Deduplicate by match_key

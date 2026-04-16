@@ -65,9 +65,15 @@ export async function GET(request: NextRequest) {
         totalSynced += rows.length;
       } else {
         fetchErrors++;
+        if (singleEvent) {
+          return NextResponse.json({ error: error.message, code: error.code, eventKey });
+        }
       }
-    } catch {
+    } catch (e) {
       fetchErrors++;
+      if (singleEvent) {
+        return NextResponse.json({ error: String(e), eventKey });
+      }
     }
   }
 

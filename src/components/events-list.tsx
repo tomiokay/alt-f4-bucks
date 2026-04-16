@@ -25,6 +25,20 @@ type UpcomingTbaEvent = {
   endDate: string;
 };
 
+// Unified event type for display
+type DisplayEvent = {
+  key: string;
+  name: string;
+  status: "live" | "upcoming" | "completed";
+  hasSchedule: boolean;
+  totalMatches: number;
+  completedMatches: number;
+  upcomingMatches: number;
+  totalVolume: number;
+  startTime: string | null;
+  isFavorite: boolean;
+};
+
 type Props = {
   events: EventSummary[];
   allEvents: EventSummary[];
@@ -40,26 +54,65 @@ function formatDate(time: string | null): string {
   });
 }
 
+function getStatus(e: EventSummary): "live" | "upcoming" | "completed" {
+  // Live = has matches AND not all completed
+  if (e.totalMatches > 0 && e.upcomingMatches > 0) return "live";
+  // Completed = has matches AND all done
+  if (e.totalMatches > 0 && e.upcomingMatches === 0) return "completed";
+  return "upcoming";
+}
+
 export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props) {
   const [filter, setFilter] = useState<"all" | "live" | "upcoming" | "completed" | "favorites">("all");
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [favorites, setFavorites] = useState<Set<string>>(
-    new Set(allEvents.filter((e) => e.isFavorite).map((e) => e.key))
+    new Set([
+      ...allEvents.filter((e) => e.isFavorite).map((e) => e.key),
+    ])
   );
   const router = useRouter();
 
-  // Use allEvents when searching, recent events otherwise
-  const baseEvents = search ? allEvents : events;
+  // Build unified display list: synced events + unsynced TBA events
+  const syncedKeys = new Set(allEvents.map((e) => e.key));
 
-  const filtered = baseEvents.filter((e) => {
+  const unsyncedDisplay: DisplayEvent[] = upcomingTbaEvents
+    .filter((e) => !syncedKeys.has(e.key))
+    .map((e) => {
+      const now = new Date();
+      const start = new Date(e.startDate);
+      const end = new Date(e.endDate + "T23:59:59");
+      const isLive = start <= now && end >= now;
+      return {
+        key: e.key,
+        name: e.name,
+        status: isLive ? "live" as const : "upcoming" as const,
+        hasSchedule: false,
+        totalMatches: 0,
+        completedMatches: 0,
+        upcomingMatches: 0,
+        totalVolume: 0,
+        startTime: e.startDate,
+        isFavorite: favorites.has(e.key),
+      };
+    });
+
+  const syncedDisplay: DisplayEvent[] = (search ? allEvents : events).map((e) => ({
+    ...e,
+    status: getStatus(e),
+    hasSchedule: true,
+  }));
+
+  const allDisplay = [...syncedDisplay, ...unsyncedDisplay];
+
+  const filtered = allDisplay.filter((e) => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.key.includes(search.toLowerCase())) {
       return false;
     }
     if (filter === "favorites") return favorites.has(e.key);
-    if (filter === "live") return e.upcomingMatches > 0 && e.completedMatches > 0;
-    if (filter === "upcoming") return e.completedMatches === 0;
-    if (filter === "completed") return e.upcomingMatches === 0 && e.completedMatches > 0;
+    if (filter === "live") return e.status === "live";
+    if (filter === "upcoming") return e.status === "upcoming";
+    if (filter === "completed") return e.status === "completed";
     return true;
   });
 
@@ -114,51 +167,51 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
           No events found
         </div>
       ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((event) => {
-                const isLive = event.upcomingMatches > 0 && event.completedMatches > 0;
-                const isDone = event.upcomingMatches === 0 && event.completedMatches > 0;
-                const progress = event.totalMatches > 0
-                  ? Math.round((event.completedMatches / event.totalMatches) * 100)
-                  : 0;
-                const isFav = favorites.has(event.key);
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((event) => {
+            const isFav = favorites.has(event.key);
+            const progress = event.totalMatches > 0
+              ? Math.round((event.completedMatches / event.totalMatches) * 100)
+              : 0;
 
-                return (
-                  <div key={event.key} className="rounded-xl bg-[#161b22] hover:bg-[#1c2128] transition-colors relative">
-                    {/* Favorite button */}
-                    <button
-                      onClick={() => handleToggleFavorite(event.key)}
-                      className="absolute top-3 right-3 z-10"
-                    >
-                      <Star
-                        className={cn(
-                          "h-4 w-4 transition-colors",
-                          isFav ? "text-[#f59e0b] fill-[#f59e0b]" : "text-[#484f58] hover:text-[#7d8590]"
-                        )}
-                      />
-                    </button>
+            return (
+              <div key={event.key} className="rounded-xl bg-[#161b22] hover:bg-[#1c2128] transition-colors relative">
+                {/* Favorite button */}
+                <button
+                  onClick={() => handleToggleFavorite(event.key)}
+                  className="absolute top-3 right-3 z-10"
+                >
+                  <Star
+                    className={cn(
+                      "h-4 w-4 transition-colors",
+                      isFav ? "text-[#f59e0b] fill-[#f59e0b]" : "text-[#484f58] hover:text-[#7d8590]"
+                    )}
+                  />
+                </button>
 
-                    <Link href={`/events/${event.key}`} className="block p-4">
-                      {/* Status badge */}
-                      <div className="flex items-center justify-between mb-2 pr-6">
-                        {isLive ? (
-                          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#22c55e]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] animate-pulse" />
-                            LIVE
-                          </span>
-                        ) : isDone ? (
-                          <span className="text-[10px] font-medium text-[#484f58]">COMPLETED</span>
-                        ) : (
-                          <span className="text-[10px] font-medium text-[#388bfd]">UPCOMING</span>
-                        )}
-                        <span className="text-[10px] text-[#484f58]">{formatDate(event.startTime)}</span>
-                      </div>
+                <Link href={`/events/${event.key}`} className="block p-4">
+                  {/* Status badge */}
+                  <div className="flex items-center justify-between mb-2 pr-6">
+                    {event.status === "live" ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#22c55e]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+                        LIVE
+                      </span>
+                    ) : event.status === "completed" ? (
+                      <span className="text-[10px] font-medium text-[#484f58]">COMPLETED</span>
+                    ) : (
+                      <span className="text-[10px] font-medium text-[#388bfd]">UPCOMING</span>
+                    )}
+                    <span className="text-[10px] text-[#484f58]">{formatDate(event.startTime)}</span>
+                  </div>
 
-                      {/* Event name */}
-                      <h3 className="text-[14px] font-medium text-[#e6edf3] leading-snug mb-3">
-                        {event.name}
-                      </h3>
+                  {/* Event name */}
+                  <h3 className="text-[14px] font-medium text-[#e6edf3] leading-snug mb-3">
+                    {event.name}
+                  </h3>
 
+                  {event.hasSchedule ? (
+                    <>
                       {/* Progress bar */}
                       <div className="h-1.5 rounded-full bg-[#21262d] overflow-hidden mb-2">
                         <div
@@ -174,40 +227,16 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
                           <span>${event.totalVolume.toLocaleString()} vol</span>
                         )}
                       </div>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-      {/* TBA events without match schedules yet — only show in all/upcoming */}
-      {(filter === "upcoming" || filter === "all") && upcomingTbaEvents.length > 0 && (
-        <div className="space-y-3 mt-6">
-          <h3 className="text-[14px] font-medium text-[#7d8590]">No match schedule yet</h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {upcomingTbaEvents
-              .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.key.includes(search.toLowerCase()))
-              .map((event) => (
-                <div
-                  key={event.key}
-                  className="rounded-xl bg-[#161b22] p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-medium text-[#388bfd]">UPCOMING</span>
-                    <span className="text-[10px] text-[#484f58]">
-                      {formatDate(event.startDate)}
-                    </span>
-                  </div>
-                  <h3 className="text-[14px] font-medium text-[#e6edf3] leading-snug mb-3">
-                    {event.name}
-                  </h3>
-                  <p className="text-[11px] text-[#484f58]">
-                    No match schedule yet
-                  </p>
-                </div>
-              ))}
-          </div>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-[#484f58]">
+                      No match schedule yet
+                    </p>
+                  )}
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

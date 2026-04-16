@@ -125,16 +125,26 @@ export function EventsList({ events, allEvents, upcomingTbaEvents = [] }: Props)
   });
 
   function handleToggleFavorite(eventKey: string) {
+    // Optimistic update — toggle UI immediately
+    const wasFavorited = favorites.has(eventKey);
+    setFavorites((f) => {
+      const next = new Set(f);
+      if (wasFavorited) next.delete(eventKey);
+      else next.add(eventKey);
+      return next;
+    });
+
+    // Then persist to server
     startTransition(async () => {
       const res = await toggleFavoriteEvent(eventKey);
-      if (res.success) {
+      if (!res.success) {
+        // Revert on failure
         setFavorites((f) => {
           const next = new Set(f);
-          if (res.favorited) next.add(eventKey);
+          if (wasFavorited) next.add(eventKey);
           else next.delete(eventKey);
           return next;
         });
-        router.refresh();
       }
     });
   }

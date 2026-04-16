@@ -128,6 +128,13 @@ export async function resolveCompletedPools() {
       winningSide = match.winning_alliance; // "red" or "blue"
     }
 
+    // Get bets before resolving so we can notify
+    const { data: betsToResolve } = await service
+      .from("pool_bets")
+      .select("id, user_id, side, amount")
+      .eq("match_key", matchKey)
+      .is("payout", null);
+
     const result = {
       red_score: match.red_score,
       blue_score: match.blue_score,
@@ -141,6 +148,38 @@ export async function resolveCompletedPools() {
     });
 
     totalResolved += (count as number) ?? 0;
+
+    // Send payout notifications
+    if (betsToResolve && betsToResolve.length > 0) {
+      const { data: resolvedBets } = await service
+        .from("pool_bets")
+        .select("id, user_id, side, amount, payout")
+        .eq("match_key", matchKey)
+        .in("id", betsToResolve.map((b) => b.id));
+
+      const notifications = (resolvedBets ?? betsToResolve).map((bet) => {
+        const won = bet.side === winningSide;
+        const tied = winningSide === "tie";
+        const payout = (bet as { payout?: number }).payout ?? 0;
+        const multiplier = bet.amount > 0 ? (payout / bet.amount).toFixed(1) : "0";
+        return {
+          user_id: bet.user_id,
+          type: tied ? "bet_refund" : won ? "bet_won" : "bet_lost",
+          message: tied
+            ? `Match ${matchKey} ended in a tie. Your $${bet.amount} bet was refunded.`
+            : won
+              ? `You won your $${bet.amount.toLocaleString()} bet on ${bet.side} in ${matchKey}! Paid out $${payout.toLocaleString()} (${multiplier}x)`
+              : `You lost your $${bet.amount.toLocaleString()} bet on ${bet.side} in ${matchKey}.`,
+          meta: { match_key: matchKey, bet_id: bet.id },
+        };
+      });
+
+      try {
+        await service.from("notifications").insert(notifications);
+      } catch {
+        // non-critical
+      }
+    }
   }
 
   revalidatePath("/betting");

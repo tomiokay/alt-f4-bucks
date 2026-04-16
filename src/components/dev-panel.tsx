@@ -12,6 +12,7 @@ import {
   createTestRankingsAndAlliances,
   createTestPlayoffMatches,
   resolveTestPredictionMarket,
+  deleteEvent,
 } from "@/app/actions/dev";
 import type { MatchCache, Profile, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
@@ -66,6 +67,14 @@ export function DevPanel({
           <ResolvePredictionCard markets={predictionMarkets} pools={predictionPools} router={router} />
         </div>
       </div>
+
+      {/* Manage Events */}
+      {eventKeys.length > 0 && (
+        <div>
+          <h2 className="text-[14px] font-medium text-[#7d8590] mb-3">Manage Events</h2>
+          <DeleteEventCard eventKeys={eventKeys} eventNames={eventNames} router={router} />
+        </div>
+      )}
 
       {/* Admin */}
       <div>
@@ -777,6 +786,68 @@ function ResetCard({ router }: { router: ReturnType<typeof useRouter> }) {
         className="w-full rounded-lg bg-[#ef4444] py-2 text-[13px] font-semibold text-white hover:bg-[#dc2626] disabled:opacity-50 transition-colors">
         {loading ? "Resetting..." : confirm ? "Confirm Reset" : "Reset Everything"}
       </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function DeleteEventCard({
+  eventKeys,
+  eventNames,
+  router,
+}: {
+  eventKeys: string[];
+  eventNames: Record<string, string>;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+
+  async function handleDelete(eventKey: string) {
+    if (confirmKey !== eventKey) {
+      setConfirmKey(eventKey);
+      return;
+    }
+    setLoading(true);
+    setMsg(null);
+    const res = await deleteEvent(eventKey);
+    setLoading(false);
+    setConfirmKey(null);
+    if (res.error) setMsg(`Error: ${res.error}`);
+    else {
+      setMsg(`Deleted ${eventNames[eventKey] ?? eventKey}`);
+      router.refresh();
+    }
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161b22] border border-[#21262d] p-5 space-y-3 max-w-md">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#e6edf3]">Delete Event</h3>
+        <p className="text-[11px] text-[#484f58]">Remove an event and all its matches, bets, and prediction markets</p>
+      </div>
+      <div className="space-y-2">
+        {eventKeys.map((ek) => (
+          <div key={ek} className="flex items-center justify-between rounded-lg bg-[#0d1117] px-3 py-2">
+            <div className="min-w-0">
+              <span className="text-[12px] text-[#e6edf3] block truncate">{eventNames[ek] ?? ek}</span>
+              <span className="text-[10px] text-[#484f58]">{ek}</span>
+            </div>
+            <button
+              onClick={() => handleDelete(ek)}
+              disabled={loading}
+              className={`shrink-0 rounded-md px-3 py-1 text-[11px] font-semibold transition-colors ${
+                confirmKey === ek
+                  ? "bg-[#ef4444] text-white"
+                  : "bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 border border-[#ef4444]/30"
+              } disabled:opacity-50`}
+            >
+              {loading && confirmKey === ek ? "Deleting..." : confirmKey === ek ? "Confirm" : "Delete"}
+            </button>
+          </div>
+        ))}
+      </div>
       {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
     </div>
   );

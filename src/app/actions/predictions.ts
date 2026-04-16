@@ -398,5 +398,71 @@ export async function resolveScoreMarkets(eventKey: string) {
     }
   }
 
+  // Send payout notifications for all prediction bets that were just resolved
+  if (resolved > 0) {
+    await sendPredictionPayoutNotifications(service, eventKey);
+  }
+
   return resolved;
+}
+
+async function sendPredictionPayoutNotifications(
+  service: Awaited<ReturnType<typeof createServiceClient>>,
+  eventKey: string
+) {
+  try {
+    // Find recently resolved prediction markets for this event
+    const { data: resolvedMarkets } = await service
+      .from("prediction_markets")
+      .select("id, title")
+      .eq("event_key", eventKey)
+      .eq("status", "resolved");
+
+    if (!resolvedMarkets || resolvedMarkets.length === 0) return;
+
+    const marketIds = resolvedMarkets.map((m) => m.id);
+    const marketTitles: Record<string, string> = {};
+    for (const m of resolvedMarkets) marketTitles[m.id] = m.title;
+
+    // Find bets on these markets that have payouts but no notification yet
+    const { data: resolvedBets } = await service
+      .from("prediction_bets")
+      .select("id, user_id, market_id, amount, payout")
+      .in("market_id", marketIds)
+      .not("payout", "is", null);
+
+    if (!resolvedBets || resolvedBets.length === 0) return;
+
+    // Check which bets already have notifications
+    const betIds = resolvedBets.map((b) => b.id);
+    const { data: existingNotifs } = await service
+      .from("notifications")
+      .select("meta")
+      .in("meta->>prediction_bet_id", betIds);
+
+    const notifiedBetIds = new Set(
+      (existingNotifs ?? []).map((n) => (n.meta as Record<string, string>)?.prediction_bet_id)
+    );
+
+    const newNotifications = resolvedBets
+      .filter((b) => !notifiedBetIds.has(b.id))
+      .map((bet) => {
+        const won = bet.payout > 0;
+        const title = marketTitles[bet.market_id] ?? "prediction market";
+        return {
+          user_id: bet.user_id,
+          type: won ? "bet_won" : "bet_lost",
+          message: won
+            ? `You won $${bet.payout.toLocaleString()} on "${title}"!`
+            : `You lost your $${bet.amount.toLocaleString()} bet on "${title}".`,
+          meta: { prediction_bet_id: bet.id, market_id: bet.market_id },
+        };
+      });
+
+    if (newNotifications.length > 0) {
+      await service.from("notifications").insert(newNotifications);
+    }
+  } catch {
+    // non-critical
+  }
 }

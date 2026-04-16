@@ -456,6 +456,43 @@ export async function resolveTestPredictionMarket(formData: FormData) {
   }
 }
 
+export async function deleteEvent(eventKey: string) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  // Delete in order: prediction bets → prediction markets → odds history → comments → notifications → pool bets → match cache
+  const { data: predMarkets } = await service
+    .from("prediction_markets")
+    .select("id")
+    .eq("event_key", eventKey);
+
+  if (predMarkets && predMarkets.length > 0) {
+    const marketIds = predMarkets.map((m) => m.id);
+    await service.from("prediction_bets").delete().in("market_id", marketIds);
+    await service.from("prediction_markets").delete().eq("event_key", eventKey);
+  }
+
+  // Get match keys for this event
+  const { data: matches } = await service
+    .from("match_cache")
+    .select("match_key")
+    .eq("event_key", eventKey);
+
+  if (matches && matches.length > 0) {
+    const matchKeys = matches.map((m) => m.match_key);
+    await service.from("odds_history").delete().in("match_key", matchKeys);
+    await service.from("comments").delete().in("match_key", matchKeys);
+    await service.from("pool_bets").delete().in("match_key", matchKeys);
+  }
+
+  await service.from("match_cache").delete().eq("event_key", eventKey);
+
+  revalidatePath("/");
+  revalidatePath("/betting");
+  revalidatePath("/events");
+  return { success: true, error: null };
+}
+
 export async function updateTeamNumber(formData: FormData) {
   await requireAdmin();
   const service = await createServiceClient();

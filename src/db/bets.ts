@@ -190,6 +190,26 @@ export async function searchMatches(query: string, limit = 100): Promise<MatchCa
   // Sanitize: remove characters that could break PostgREST filters
   const sanitize = (s: string) => s.replace(/[%(),.*]/g, "");
 
+  // Check if query is a team search (e.g. "team 27", "team 7558")
+  const teamMatch = q.match(/^team\s+(\d+)$/i);
+  if (teamMatch) {
+    const teamNum = teamMatch[1];
+    const { createServiceClient } = await import("@/lib/supabase/server");
+    const service = await createServiceClient();
+
+    const [{ data: redData }, { data: blueData }] = await Promise.all([
+      service.from("match_cache").select("*").contains("red_teams", [teamNum]).order("scheduled_time", { ascending: true }).limit(limit),
+      service.from("match_cache").select("*").contains("blue_teams", [teamNum]).order("scheduled_time", { ascending: true }).limit(limit),
+    ]);
+
+    const seen = new Set<string>();
+    const results: MatchCache[] = [];
+    for (const m of [...(redData ?? []), ...(blueData ?? [])] as MatchCache[]) {
+      if (!seen.has(m.match_key)) { seen.add(m.match_key); results.push(m); }
+    }
+    return results.slice(0, limit);
+  }
+
   // Parse multi-word queries like "niagara qual 11" or "technology playoff 1"
   const words = q.split(/\s+/);
   let eventNameParts: string[] = [];
@@ -212,6 +232,8 @@ export async function searchMatches(query: string, limit = 100): Promise<MatchCa
       compLevel = word;
       continue;
     }
+    // "team" keyword — skip it (handled above for "team 27" pattern)
+    if (word === "team") continue;
     // Otherwise it's part of the event name
     eventNameParts.push(word);
   }

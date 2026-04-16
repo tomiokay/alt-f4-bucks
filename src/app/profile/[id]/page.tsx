@@ -21,11 +21,9 @@ export default async function PublicProfilePage({ params }: Props) {
     getUserPredictionBets(profile.id),
   ]);
 
+  // P&L = current balance - starting balance (consistent with leaderboard)
+  const totalPnL = balance - 10000;
   const settledBets = bets.filter((b) => b.payout !== null);
-  const poolPnL = settledBets.reduce((s, b) => s + (b.payout! - b.amount), 0);
-  const settledPredBets = predBets.filter((b) => b.payout !== null);
-  const predPnL = settledPredBets.reduce((s, b) => s + (b.payout! - b.amount), 0);
-  const totalPnL = poolPnL + predPnL;
   const biggestWin = settledBets
     .filter((b) => b.payout! > b.amount)
     .reduce((max, b) => Math.max(max, b.payout! - b.amount), 0);

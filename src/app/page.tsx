@@ -105,7 +105,12 @@ async function HomeContent() {
     (m.type === "event_winner" || m.type === "ranking_top1" || m.type === "ranking_position")
   );
 
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const breaking = [...completed]
+    .filter((e) => {
+      const time = e.match.actual_time ?? e.match.scheduled_time ?? "";
+      return time >= twoWeeksAgo;
+    })
     .sort((a, b) => {
       const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
       const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";

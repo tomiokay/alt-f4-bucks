@@ -299,13 +299,19 @@ export function TrendingMarkets({
 
         if (tab === "matches" || tab === "all") {
           if (completed.length === 0) return null;
+          // Sort by most recent first
+          const sorted = [...completed].sort((a, b) => {
+            const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
+            const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
+            return bTime.localeCompare(aTime);
+          });
           return (
             <div className="mt-8">
               <h2 className="text-[16px] font-semibold text-[#e6edf3] mb-3">
                 Recently resolved
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {completed.slice(0, 6).map((item) => (
+                {sorted.slice(0, 6).map((item) => (
                   <MarketCard key={item.match.match_key} item={item} />
                 ))}
               </div>

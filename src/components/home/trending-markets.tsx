@@ -1,28 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { MatchCard } from "@/components/match-card";
+import { MarketCard } from "./market-card";
 import { PredictionMarketCard } from "@/components/prediction-market-card";
 import { BetSlip } from "@/components/bet-slip";
 import { calculateOdds } from "@/lib/odds";
 import { cn } from "@/lib/utils";
+import type { EnrichedMatch } from "@/app/page";
 import type {
   MatchCache,
-  MatchOdds,
   PoolSummary,
   PredictionMarket,
   PredictionPoolOption,
 } from "@/lib/types";
 
-type EnrichedMatch = {
-  match: MatchCache;
-  odds: MatchOdds;
-  pool: PoolSummary | null;
-};
-
 type Props = {
   matches: EnrichedMatch[];
+  completed: EnrichedMatch[];
   pools: Record<string, PoolSummary>;
   balance: number;
   predictionMarkets: PredictionMarket[];
@@ -32,17 +26,15 @@ type Props = {
 type TabKey = "all" | "matches" | "events" | "rankings" | "custom";
 type SortKey = "activity" | "volume" | "newest";
 
-export function TrendingView({
+export function TrendingMarkets({
   matches,
+  completed,
   pools,
   balance,
   predictionMarkets,
   predictionPools,
 }: Props) {
-  const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as TabKey) || "all";
-
-  const [tab, setTab] = useState<TabKey>(initialTab);
+  const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<SortKey>("activity");
   const [slipMatch, setSlipMatch] = useState<MatchCache | null>(null);
   const [slipSide, setSlipSide] = useState<"red" | "blue">("red");
@@ -54,21 +46,7 @@ export function TrendingView({
     setSlipOpen(true);
   }
 
-  const tabs: { key: TabKey; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "matches", label: "Match Markets" },
-    { key: "events", label: "Event Winners" },
-    { key: "rankings", label: "Rankings" },
-    { key: "custom", label: "Custom" },
-  ];
-
-  const sorts: { key: SortKey; label: string }[] = [
-    { key: "activity", label: "Most Active" },
-    { key: "volume", label: "Highest Volume" },
-    { key: "newest", label: "Newest" },
-  ];
-
-  // Helper: get total pool and bettors for a prediction market
+  // Helpers
   function getPredStats(marketId: string) {
     const opts = predictionPools[marketId] ?? {};
     let pool = 0;
@@ -80,17 +58,28 @@ export function TrendingView({
     return { pool, bettors };
   }
 
-  // Filter prediction markets by tab
+  // Filter prediction markets
   const eventWinnerMarkets = predictionMarkets.filter((m) => m.type === "event_winner");
   const rankingMarkets = predictionMarkets.filter(
     (m) => m.type === "ranking_top1" || m.type === "ranking_top8" || m.type === "ranking_position"
   );
   const customMarkets = predictionMarkets.filter((m) => m.is_custom);
-  const scoreMarkets = predictionMarkets.filter(
-    (m) => m.type === "score_over_under" || m.type === "score_prediction"
-  );
 
-  // Sort prediction markets
+  const tabs: { key: TabKey; label: string; count: number }[] = [
+    { key: "all", label: "All", count: matches.length + predictionMarkets.length },
+    { key: "matches", label: "Matches", count: matches.length },
+    { key: "events", label: "Event Winners", count: eventWinnerMarkets.length },
+    { key: "rankings", label: "Rankings", count: rankingMarkets.length },
+    { key: "custom", label: "Custom", count: customMarkets.length },
+  ];
+
+  const sorts: { key: SortKey; label: string }[] = [
+    { key: "activity", label: "Most Active" },
+    { key: "volume", label: "Highest Volume" },
+    { key: "newest", label: "Newest" },
+  ];
+
+  // Sort helpers
   function sortPredMarkets(list: PredictionMarket[]): PredictionMarket[] {
     return [...list].sort((a, b) => {
       const aStats = getPredStats(a.id);
@@ -104,7 +93,6 @@ export function TrendingView({
     });
   }
 
-  // Sort matches
   function sortMatches(list: EnrichedMatch[]): EnrichedMatch[] {
     return [...list].sort((a, b) => {
       if (sort === "activity") {
@@ -120,11 +108,7 @@ export function TrendingView({
     });
   }
 
-  const selectedOdds = slipMatch
-    ? calculateOdds(pools[slipMatch.match_key] ?? null, null)
-    : null;
-
-  // Build unified items for "all" tab
+  // Build unified list for "all" tab
   type UnifiedItem =
     | { kind: "match"; data: EnrichedMatch }
     | { kind: "prediction"; data: PredictionMarket };
@@ -153,7 +137,6 @@ export function TrendingView({
         return bPool - aPool;
       }
       if (sort === "volume") return bPool - aPool;
-      // newest
       const aTime =
         a.kind === "match"
           ? a.data.match.scheduled_time ?? a.data.match.fetched_at
@@ -166,58 +149,42 @@ export function TrendingView({
     });
   }
 
-  // Counts for tab badges
-  const matchCount = matches.length;
-  const eventCount = eventWinnerMarkets.length;
-  const rankCount = rankingMarkets.length;
-  const customCount = customMarkets.length;
+  const selectedOdds = slipMatch
+    ? calculateOdds(pools[slipMatch.match_key] ?? null, null)
+    : null;
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-[22px] font-bold text-[#e6edf3] mb-1">Trending</h1>
-        <p className="text-[13px] text-[#7d8590]">
-          Markets ranked by what people are betting on most
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-[16px] font-semibold text-[#e6edf3]">All markets</h2>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-3 scrollbar-hide">
-        {tabs.map((t) => {
-          const count =
-            t.key === "all"
-              ? matchCount + predictionMarkets.length
-              : t.key === "matches"
-              ? matchCount
-              : t.key === "events"
-              ? eventCount
-              : t.key === "rankings"
-              ? rankCount
-              : customCount;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors border flex items-center gap-1.5",
-                tab === t.key
-                  ? "border-[#30363d] bg-[#21262d] text-[#e6edf3]"
-                  : "border-[#21262d] text-[#7d8590] hover:text-[#e6edf3] hover:border-[#30363d]"
-              )}
-            >
-              {t.label}
-              {count > 0 && (
-                <span className="rounded-md bg-[#30363d] px-1.5 py-0.5 text-[10px] font-medium text-[#7d8590]">
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={cn(
+              "shrink-0 rounded-full px-3 py-1 text-[12px] font-medium transition-colors border flex items-center gap-1.5",
+              tab === t.key
+                ? "border-[#30363d] bg-[#21262d] text-[#e6edf3]"
+                : "border-[#21262d] text-[#7d8590] hover:text-[#e6edf3] hover:border-[#30363d]"
+            )}
+          >
+            {t.label}
+            {t.count > 0 && (
+              <span className="rounded-md bg-[#30363d] px-1 py-0.5 text-[10px] font-medium text-[#7d8590] leading-none">
+                {t.count}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Sort */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-3">
         <span className="text-[12px] text-[#7d8590] font-medium">Sort by:</span>
         {sorts.map((s) => (
           <button
@@ -235,27 +202,38 @@ export function TrendingView({
         ))}
       </div>
 
-      {/* Content */}
+      {/* Grid */}
       {tab === "all" && (
-        <AllTab
-          items={getUnifiedItems()}
-          pools={pools}
-          predictionPools={predictionPools}
-          balance={balance}
-          onBet={openSlip}
-        />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {getUnifiedItems().map((item) =>
+            item.kind === "match" ? (
+              <MarketCard
+                key={item.data.match.match_key}
+                item={item.data}
+                onBetRed={() => openSlip(item.data.match, "red")}
+                onBetBlue={() => openSlip(item.data.match, "blue")}
+              />
+            ) : (
+              <PredictionMarketCard
+                key={item.data.id}
+                market={item.data}
+                pools={predictionPools[item.data.id] ?? {}}
+                balance={balance}
+              />
+            )
+          )}
+          {matches.length === 0 && predictionMarkets.length === 0 && <EmptyState />}
+        </div>
       )}
 
       {tab === "matches" && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sortMatches(matches).map((item) => (
-            <MatchCard
+            <MarketCard
               key={item.match.match_key}
-              match={item.match}
-              odds={item.odds}
+              item={item}
               onBetRed={() => openSlip(item.match, "red")}
               onBetBlue={() => openSlip(item.match, "blue")}
-              compact
             />
           ))}
           {matches.length === 0 && <EmptyState />}
@@ -304,6 +282,20 @@ export function TrendingView({
         </div>
       )}
 
+      {/* Recently resolved */}
+      {completed.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-[16px] font-semibold text-[#e6edf3] mb-3">
+            Recently resolved
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {completed.slice(0, 6).map((item) => (
+              <MarketCard key={item.match.match_key} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <BetSlip
         match={slipMatch}
         side={slipSide}
@@ -316,53 +308,11 @@ export function TrendingView({
   );
 }
 
-function AllTab({
-  items,
-  pools,
-  predictionPools,
-  balance,
-  onBet,
-}: {
-  items: ({ kind: "match"; data: { match: MatchCache; odds: MatchOdds; pool: PoolSummary | null } } | { kind: "prediction"; data: PredictionMarket })[];
-  pools: Record<string, PoolSummary>;
-  predictionPools: Record<string, Record<string, PredictionPoolOption>>;
-  balance: number;
-  onBet: (match: MatchCache, side: "red" | "blue") => void;
-}) {
-  if (items.length === 0) return <EmptyState />;
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) =>
-        item.kind === "match" ? (
-          <MatchCard
-            key={item.data.match.match_key}
-            match={item.data.match}
-            odds={item.data.odds}
-            onBetRed={() => onBet(item.data.match, "red")}
-            onBetBlue={() => onBet(item.data.match, "blue")}
-            compact
-          />
-        ) : (
-          <PredictionMarketCard
-            key={item.data.id}
-            market={item.data}
-            pools={predictionPools[item.data.id] ?? {}}
-            balance={balance}
-          />
-        )
-      )}
-    </div>
-  );
-}
-
 function EmptyState() {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
       <p className="text-[14px] text-[#7d8590]">No markets found</p>
-      <p className="text-[12px] text-[#484f58] mt-1">
-        Waiting for events to start
-      </p>
+      <p className="text-[12px] text-[#484f58] mt-1">Waiting for events to start</p>
     </div>
   );
 }

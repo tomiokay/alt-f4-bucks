@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Trophy, BarChart3, Menu, ChevronDown, Search, Settings } from "lucide-react";
+import { LogOut, Trophy, BarChart3, Menu, ChevronDown, Search, Settings, BookOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { useState } from "react";
@@ -27,13 +27,10 @@ type NavProps = {
 };
 
 const CATEGORY_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/trending", label: "Trending" },
+  { href: "/", label: "Trending" },
   { href: "/betting", label: "Markets" },
   { href: "/events", label: "Events" },
   { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/dashboard", label: "Portfolio" },
-  { href: "/how-it-works", label: "Guide" },
   { href: "/manager", label: "Admin", role: ["manager", "admin"] as string[] },
   { href: "/dev", label: "Dev", role: ["manager", "admin"] as string[] },
 ];
@@ -166,6 +163,15 @@ export function Nav({ profile, balance = 0, notifications = [], unreadCount = 0 
                     >
                       <Settings className="mr-2 h-4 w-4 text-[#7d8590]" />
                       Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/how-it-works"
+                      className="cursor-pointer text-[#e6edf3] focus:bg-[#1c2128] focus:text-[#e6edf3]"
+                    >
+                      <BookOpen className="mr-2 h-4 w-4 text-[#7d8590]" />
+                      Guide
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-[#30363d]" />

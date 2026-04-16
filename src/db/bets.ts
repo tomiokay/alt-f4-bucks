@@ -105,7 +105,8 @@ export async function getActiveEventKeys(): Promise<string[]> {
 }
 
 export async function getAllCachedMatches(): Promise<MatchCache[]> {
-  const supabase = await createClient();
+  const { createServiceClient } = await import("@/lib/supabase/server");
+  const supabase = await createServiceClient();
 
   // Fetch most recent matches first (descending), enough to cover recent events
   const { data } = await supabase

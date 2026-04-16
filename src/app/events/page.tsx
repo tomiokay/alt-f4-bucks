@@ -4,20 +4,20 @@ import { getAllPoolSummaries } from "@/db/bets";
 import { getCurrentEvents } from "@/lib/tba";
 import { getUserFavoriteEvents } from "@/app/actions/favorites";
 import { EventsList } from "@/components/events-list";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import type { MatchCache } from "@/lib/types";
 
 export default async function EventsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const supabase = await createClient();
+  const service = await createServiceClient();
 
   const [poolMap, favoriteKeys, tbaEvents, { data: allMatches }] = await Promise.all([
     getAllPoolSummaries(),
     getUserFavoriteEvents(profile.id),
     getCurrentEvents(),
-    supabase
+    service
       .from("match_cache")
       .select("event_key, event_name, match_key, is_complete, scheduled_time")
       .order("scheduled_time", { ascending: true })

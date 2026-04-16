@@ -34,6 +34,7 @@ export default async function PublicProfilePage({ params }: Props) {
       profile={profile}
       balance={balance}
       bets={bets}
+      predictionBets={predBets}
       totalPnL={totalPnL}
       biggestWin={biggestWin}
       totalBets={totalBets}

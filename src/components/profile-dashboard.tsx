@@ -10,12 +10,13 @@ import {
   Tooltip,
   YAxis,
 } from "recharts";
-import type { Profile, PoolBetWithProfile } from "@/lib/types";
+import type { Profile, PoolBetWithProfile, PredictionBet } from "@/lib/types";
 
 type Props = {
   profile: Profile;
   balance: number;
   bets: PoolBetWithProfile[];
+  predictionBets?: PredictionBet[];
   totalPnL: number;
   biggestWin: number;
   totalBets: number;
@@ -75,8 +76,8 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin, totalBets }: Props) {
-  const [tab, setTab] = useState<"positions" | "activity">("positions");
+export function ProfileDashboard({ profile, balance, bets, predictionBets = [], totalPnL, biggestWin, totalBets }: Props) {
+  const [tab, setTab] = useState<"positions" | "predictions" | "activity">("positions");
   const [posTab, setPosTab] = useState<"active" | "closed">("active");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -157,6 +158,17 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
           )}
         >
           Positions
+        </button>
+        <button
+          onClick={() => setTab("predictions")}
+          className={cn(
+            "pb-2.5 text-[14px] font-medium transition-colors border-b-2",
+            tab === "predictions"
+              ? "text-[#e6edf3] border-[#e6edf3]"
+              : "text-[#484f58] border-transparent hover:text-[#7d8590]"
+          )}
+        >
+          Predictions {predictionBets.length > 0 && <span className="ml-1 text-[11px] text-[#484f58]">({predictionBets.length})</span>}
         </button>
         <button
           onClick={() => setTab("activity")}
@@ -288,6 +300,57 @@ export function ProfileDashboard({ profile, balance, bets, totalPnL, biggestWin,
               ))
             )}
           </div>
+        </div>
+      ) : tab === "predictions" ? (
+        /* Predictions tab */
+        <div className="rounded-xl bg-[#161b22] overflow-hidden">
+          <div className="grid grid-cols-[1fr_80px_80px] gap-2 px-4 py-2.5 text-[10px] font-medium text-[#484f58] uppercase tracking-wider border-b border-[#21262d]">
+            <span>Market</span>
+            <span className="text-right">Bet</span>
+            <span className="text-right">Payout</span>
+          </div>
+
+          {predictionBets.length === 0 ? (
+            <div className="flex items-center justify-center py-12 text-[13px] text-[#484f58]">
+              No prediction bets yet
+            </div>
+          ) : (
+            predictionBets.map((bet) => {
+              const isWon = bet.payout !== null && bet.payout > 0;
+              const isLost = bet.payout !== null && bet.payout === 0;
+              const isPending = bet.payout === null;
+              const isScore = bet.predicted_red !== null;
+
+              return (
+                <div
+                  key={bet.id}
+                  className="grid grid-cols-[1fr_80px_80px] gap-2 items-center px-4 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
+                >
+                  <div className="min-w-0">
+                    <span className="text-[13px] text-[#e6edf3] block truncate">
+                      {isScore
+                        ? `Score: ${bet.predicted_red}-${bet.predicted_blue}`
+                        : bet.option_key}
+                    </span>
+                    <span className="text-[11px] text-[#484f58]">
+                      {isPending ? "Pending" : isWon ? "Won" : "Lost"}
+                      {" · "}
+                      {new Date(bet.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                  <span className="text-right text-[13px] text-[#e6edf3] tabular-nums font-mono">
+                    ${bet.amount.toLocaleString()}
+                  </span>
+                  <span className={cn(
+                    "text-right text-[13px] tabular-nums font-mono",
+                    isPending ? "text-[#7d8590]" : isWon ? "text-[#22c55e]" : "text-[#ef4444]"
+                  )}>
+                    {isPending ? "—" : `$${(bet.payout ?? 0).toLocaleString()}`}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
       ) : (
         /* Activity tab */

@@ -71,16 +71,8 @@ export async function getCurrentEvents(year?: number): Promise<TBAEvent[]> {
   if (!res || !res.ok) return [];
   const events: TBAEvent[] = await res.json();
 
-  // Include events from the past 2 weeks + upcoming 2 weeks (for auto-sync)
-  const now = new Date();
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-  const twoWeeksAhead = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-
-  return events.filter((e) => {
-    const end = new Date(e.end_date + "T23:59:59");
-    const start = new Date(e.start_date);
-    return end >= twoWeeksAgo && start <= twoWeeksAhead;
-  });
+  // Return all season events — sync everything with match data
+  return events;
 }
 
 export async function getAllSeasonEvents(year?: number): Promise<TBAEvent[]> {

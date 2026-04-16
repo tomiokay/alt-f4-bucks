@@ -77,11 +77,17 @@ export default async function EventsPage() {
     e.isFavorite || (e.startTime && e.startTime >= twoWeeksAgo) || e.upcomingMatches > 0
   );
 
-  // Show ALL TBA events from the 2-week window that aren't synced yet
-  // (these have no match schedule on TBA yet)
+  // Show TBA events not yet synced (no match data on TBA)
+  // Filter to recent/upcoming only to avoid showing hundreds of old events
   const syncedKeys = new Set(eventKeys);
+  const now = new Date();
+  const twoWeeksAgoDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const upcomingTbaEvents = tbaEvents
-    .filter((e) => !syncedKeys.has(e.key))
+    .filter((e) => {
+      if (syncedKeys.has(e.key)) return false;
+      const end = new Date(e.end_date + "T23:59:59");
+      return end >= twoWeeksAgoDate; // show recent + upcoming only
+    })
     .map((e) => ({
       key: e.key,
       name: e.name,

@@ -58,15 +58,20 @@ export function TrendingMarkets({
     return { pool, bettors };
   }
 
+  // Filter out match-specific prediction types (shown on market pages instead)
+  const browsableMarkets = predictionMarkets.filter(
+    (m) => m.type !== "score_prediction" && m.type !== "score_over_under"
+  );
+
   // Filter prediction markets
-  const eventWinnerMarkets = predictionMarkets.filter((m) => m.type === "event_winner");
-  const rankingMarkets = predictionMarkets.filter(
+  const eventWinnerMarkets = browsableMarkets.filter((m) => m.type === "event_winner");
+  const rankingMarkets = browsableMarkets.filter(
     (m) => m.type === "ranking_top1" || m.type === "ranking_top8" || m.type === "ranking_position"
   );
-  const customMarkets = predictionMarkets.filter((m) => m.is_custom);
+  const customMarkets = browsableMarkets.filter((m) => m.is_custom);
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
-    { key: "all", label: "All", count: matches.length + predictionMarkets.length },
+    { key: "all", label: "All", count: matches.length + browsableMarkets.length },
     { key: "matches", label: "Matches", count: matches.length },
     { key: "events", label: "Event Winners", count: eventWinnerMarkets.length },
     { key: "rankings", label: "Rankings", count: rankingMarkets.length },
@@ -116,7 +121,7 @@ export function TrendingMarkets({
   function getUnifiedItems(): UnifiedItem[] {
     const items: UnifiedItem[] = [];
     for (const m of matches) items.push({ kind: "match", data: m });
-    for (const p of predictionMarkets) items.push({ kind: "prediction", data: p });
+    for (const p of browsableMarkets) items.push({ kind: "prediction", data: p });
 
     return items.sort((a, b) => {
       const aActivity =
@@ -222,7 +227,7 @@ export function TrendingMarkets({
               />
             )
           )}
-          {matches.length === 0 && predictionMarkets.length === 0 && <EmptyState />}
+          {matches.length === 0 && browsableMarkets.length === 0 && <EmptyState />}
         </div>
       )}
 

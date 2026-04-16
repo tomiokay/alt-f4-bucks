@@ -475,10 +475,14 @@ function PredictionsTab({
   qualPlayed: number;
   qualTotal: number;
 }) {
-  const [filter, setFilter] = useState<"all" | "score" | "event" | "ranking">("all");
+  const [filter, setFilter] = useState<"all" | "event" | "ranking">("all");
 
-  const filtered = markets.filter((m) => {
-    if (filter === "score") return m.type === "score_over_under" || m.type === "score_prediction";
+  // Score predictions are per-match and shown on individual market pages
+  const nonScoreMarkets = markets.filter(
+    (m) => m.type !== "score_prediction" && m.type !== "score_over_under"
+  );
+
+  const filtered = nonScoreMarkets.filter((m) => {
     if (filter === "event") return m.type === "event_winner";
     if (filter === "ranking") return m.type === "ranking_top1" || m.type === "ranking_top8" || m.type === "ranking_position";
     return true;
@@ -487,7 +491,7 @@ function PredictionsTab({
   const openMarkets = filtered.filter((m) => m.status === "open");
   const resolvedMarkets = filtered.filter((m) => m.status !== "open");
 
-  if (markets.length === 0) {
+  if (nonScoreMarkets.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <p className="text-[14px] text-[#7d8590]">No prediction markets yet</p>
@@ -505,7 +509,6 @@ function PredictionsTab({
         {(
           [
             { key: "all" as const, label: "All" },
-            { key: "score" as const, label: "Score O/U" },
             { key: "event" as const, label: "Event Winner" },
             { key: "ranking" as const, label: "Rankings" },
           ] as const
@@ -639,7 +642,7 @@ export function EventDetail({
         {(
           [
             { key: "matches" as const, label: "Matches", count: totalCount },
-            { key: "predictions" as const, label: "Predictions", count: predictionMarkets.filter((m) => m.status === "open").length },
+            { key: "predictions" as const, label: "Predictions", count: predictionMarkets.filter((m) => m.status === "open" && m.type !== "score_prediction" && m.type !== "score_over_under").length },
             { key: "rankings" as const, label: "Rankings", count: rankings.length },
             { key: "playoffs" as const, label: "Playoffs", count: alliances.length },
           ] as const

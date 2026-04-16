@@ -94,11 +94,11 @@ export async function getMatchByKey(matchKey: string): Promise<MatchCache | null
 
 export async function getActiveEventKeys(): Promise<string[]> {
   const supabase = await createClient();
-  // Use a minimal select with distinct-like behavior via group
+  // Fetch all event keys — need enough rows to cover all events
   const { data } = await supabase
     .from("match_cache")
     .select("event_key")
-    .limit(1000);
+    .limit(20000);
 
   const keys = new Set((data ?? []).map((d: { event_key: string }) => d.event_key));
   return Array.from(keys);

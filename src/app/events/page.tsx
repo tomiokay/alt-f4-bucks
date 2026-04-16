@@ -75,13 +75,12 @@ export default async function EventsPage() {
     return aTime.localeCompare(bTime);
   });
 
-  // Filter "All" tab: show favorites + synced events from last 2 weeks (using end time for completed events)
+  // "All" tab: show favorites + synced events from last 2 weeks
   const now = new Date();
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const recentEvents = eventSummaries.filter((e) => {
     if (e.isFavorite) return true;
     if (e.upcomingMatches > 0) return true;
-    // For completed events, check if the last match was within 2 weeks
     const latestTime = e.endTime ?? e.startTime;
     if (latestTime && latestTime >= twoWeeksAgo) return true;
     return false;

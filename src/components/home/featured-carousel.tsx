@@ -451,23 +451,18 @@ function MatchSlide({
     scheduledMs !== null && Date.now() >= scheduledMs && !match.is_complete;
   const totalTraders = odds.redBettors + odds.blueBettors;
 
+  const formattedTime = match.scheduled_time
+    ? new Date(match.scheduled_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : null;
+  const formattedDate = match.scheduled_time
+    ? new Date(match.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
+
   return (
     <div className="relative">
-      {/* Top bar: badge row */}
-      <div className="px-5 pt-4 pb-1 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <LiveBadge isLive={isLive} />
-          <CountdownTimer
-            scheduledTime={match.scheduled_time}
-            isComplete={match.is_complete}
-          />
-        </div>
-        <Image src="/logo.avif" alt="Alt-F4 Bucks" width={24} height={24} className="rounded-md" />
-      </div>
-
-      {/* Header */}
-      <div className="px-5 pt-1 pb-3">
-        <div className="flex items-center gap-2 text-[11px] text-[#7d8590] mb-2">
+      {/* Top bar */}
+      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[11px] text-[#7d8590]">
           <Link
             href={`/events/${match.event_key}`}
             className="rounded bg-[#21262d] px-1.5 py-0.5 font-medium hover:bg-[#30363d] transition-colors"
@@ -475,118 +470,93 @@ function MatchSlide({
             {match.event_name}
           </Link>
           <span>·</span>
-          <span>
-            {compLabel} {match.match_number}
-          </span>
+          <span>{compLabel} {match.match_number}</span>
         </div>
-        <h2 className="text-[18px] font-semibold text-[#e6edf3] leading-tight">
-          Who wins {compLabel} {match.match_number}?
-        </h2>
+        <Image src="/logo.avif" alt="Alt-F4 Bucks" width={24} height={24} className="rounded-md" />
       </div>
 
-      {/* Chart */}
-      <div className="px-5 pb-2">
-        <FeaturedChart
-          redPct={odds.redPct}
-          bluePct={odds.bluePct}
-          history={oddsHistory}
-        />
-      </div>
+      {/* Split layout: left info + right chart */}
+      <div className="flex flex-col md:flex-row">
+        {/* Left side: title, teams, bet buttons, activity */}
+        <div className="flex-1 min-w-0 px-5 pb-4">
+          {/* Title */}
+          <h2 className="text-[18px] font-semibold text-[#e6edf3] leading-tight mb-1">
+            {match.red_teams.join(", ")} vs {match.blue_teams.join(", ")}
+          </h2>
 
-      {/* Animated odds bar */}
-      <div className="px-5 pb-3">
-        <OddsBar redPct={odds.redPct} bluePct={odds.bluePct} />
-      </div>
-
-      {/* Alliance rows */}
-      <div className="px-5 pb-4 space-y-2">
-        {/* Red alliance */}
-        <motion.div
-          className="flex items-center justify-between"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-        >
-          <div className="flex items-center gap-2.5">
-            <motion.span
-              className="h-2.5 w-2.5 rounded-full bg-[#ef4444]"
-              animate={
-                isLive
-                  ? { scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }
-                  : undefined
-              }
-              transition={
-                isLive
-                  ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                  : undefined
-              }
-            />
-            <span className="text-[14px] text-[#e6edf3] font-mono">
-              {match.red_teams.join(" · ")}
-            </span>
+          {/* Time + status */}
+          <div className="flex items-center gap-3 mb-4">
+            {formattedTime && (
+              <span className="text-[12px] text-[#7d8590]">
+                {formattedTime} · {formattedDate}
+              </span>
+            )}
+            <LiveBadge isLive={isLive} />
+            <CountdownTimer scheduledTime={match.scheduled_time} isComplete={match.is_complete} />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-semibold text-[#e6edf3] tabular-nums w-12 text-right">
-              {odds.redPct}%
-            </span>
+
+          {/* Bet buttons */}
+          <div className="flex gap-2 mb-4">
             <motion.button
               onClick={() => onBet("red")}
-              className="rounded-md bg-[#ef4444]/15 px-3 py-1.5 text-[12px] font-semibold text-[#ef4444] hover:bg-[#ef4444]/25 transition-colors tabular-nums cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="flex-1 rounded-lg py-2.5 text-[13px] font-semibold bg-[#ef4444]/15 text-[#ef4444] hover:bg-[#ef4444]/25 transition-colors cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              Bet {odds.redPct}¢
+              Red {odds.redPct}¢
             </motion.button>
-          </div>
-        </motion.div>
-
-        {/* Blue alliance */}
-        <motion.div
-          className="flex items-center justify-between"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <div className="flex items-center gap-2.5">
-            <motion.span
-              className="h-2.5 w-2.5 rounded-full bg-[#3b82f6]"
-              animate={
-                isLive
-                  ? { scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }
-                  : undefined
-              }
-              transition={
-                isLive
-                  ? {
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: 0.5,
-                    }
-                  : undefined
-              }
-            />
-            <span className="text-[14px] text-[#e6edf3] font-mono">
-              {match.blue_teams.join(" · ")}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-semibold text-[#e6edf3] tabular-nums w-12 text-right">
-              {odds.bluePct}%
-            </span>
             <motion.button
               onClick={() => onBet("blue")}
-              className="rounded-md bg-[#3b82f6]/15 px-3 py-1.5 text-[12px] font-semibold text-[#3b82f6] hover:bg-[#3b82f6]/25 transition-colors tabular-nums cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="flex-1 rounded-lg py-2.5 text-[13px] font-semibold bg-[#3b82f6]/15 text-[#3b82f6] hover:bg-[#3b82f6]/25 transition-colors cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              Bet {odds.bluePct}¢
+              Blue {odds.bluePct}¢
             </motion.button>
           </div>
-        </motion.div>
+
+          {/* Alliance details */}
+          <div className="space-y-2 mb-3">
+            <motion.div
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <motion.span
+                className="h-2 w-2 rounded-full bg-[#ef4444]"
+                animate={isLive ? { scale: [1, 1.3, 1] } : undefined}
+                transition={isLive ? { duration: 2, repeat: Infinity } : undefined}
+              />
+              <span className="text-[12px] text-[#e6edf3] font-mono">{match.red_teams.join(", ")}</span>
+              <span className="text-[14px] font-bold text-[#ef4444] tabular-nums ml-auto">{odds.redPct}%</span>
+            </motion.div>
+            <motion.div
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <motion.span
+                className="h-2 w-2 rounded-full bg-[#3b82f6]"
+                animate={isLive ? { scale: [1, 1.3, 1] } : undefined}
+                transition={isLive ? { duration: 2, repeat: Infinity, delay: 0.5 } : undefined}
+              />
+              <span className="text-[12px] text-[#e6edf3] font-mono">{match.blue_teams.join(", ")}</span>
+              <span className="text-[14px] font-bold text-[#3b82f6] tabular-nums ml-auto">{odds.bluePct}%</span>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Right side: chart */}
+        <div className="md:w-[55%] shrink-0 px-5 md:pl-0 pb-4">
+          <div className="h-[160px]">
+            <FeaturedChart redPct={odds.redPct} bluePct={odds.bluePct} history={oddsHistory} />
+          </div>
+        </div>
       </div>
 
-      {/* Footer with animated counters */}
+      {/* Footer */}
       <motion.div
         className="flex items-center gap-4 border-t border-[#21262d] px-5 py-2.5 text-[11px] text-[#484f58]"
         initial={{ opacity: 0 }}
@@ -595,40 +565,22 @@ function MatchSlide({
       >
         {odds.totalPool > 0 && (
           <span className="flex items-center gap-1">
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <AnimatedCounter value={odds.totalPool} prefix="$" suffix=" Vol." />
+            $<AnimatedCounter value={odds.totalPool} /> Vol.
           </span>
         )}
         {totalTraders > 0 && (
           <span className="flex items-center gap-1">
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            <AnimatedCounter value={totalTraders} suffix=" traders" />
+            <AnimatedCounter value={totalTraders} /> betters
           </span>
         )}
+        <span className="ml-auto flex items-center gap-1.5 text-[#7d8590]">
+          LIVE
+          <motion.span
+            className="h-1.5 w-1.5 rounded-full bg-[#22c55e]"
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        </span>
       </motion.div>
     </div>
   );

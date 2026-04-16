@@ -6,7 +6,9 @@ import { AuditLog } from "@/components/audit-log";
 import { TeamNumberForm } from "@/components/team-number-form";
 import { getCurrentProfile, getAllProfiles } from "@/db/profiles";
 import { getAllStoreItems } from "@/db/store";
+import { getOpenCustomMarkets } from "@/app/actions/custom-markets";
 import { UserManagement } from "@/components/user-management";
+import { CustomMarketsManager } from "@/components/custom-markets-manager";
 
 export default async function ManagerPage() {
   const profile = await getCurrentProfile();
@@ -14,9 +16,10 @@ export default async function ManagerPage() {
     redirect("/dashboard");
   }
 
-  const [allProfiles, storeItems] = await Promise.all([
+  const [allProfiles, storeItems, customMarkets] = await Promise.all([
     getAllProfiles(),
     getAllStoreItems(),
+    getOpenCustomMarkets(),
   ]);
 
   const members = allProfiles;
@@ -35,6 +38,7 @@ export default async function ManagerPage() {
           <TabsTrigger value="award">Award</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
+          <TabsTrigger value="markets">Markets</TabsTrigger>
           <TabsTrigger value="store">Store</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
         </TabsList>
@@ -53,6 +57,10 @@ export default async function ManagerPage() {
           <div className="max-w-md">
             <TeamNumberForm members={members} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="markets">
+          <CustomMarketsManager markets={customMarkets} />
         </TabsContent>
 
         <TabsContent value="store">

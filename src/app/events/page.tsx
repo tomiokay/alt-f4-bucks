@@ -1,24 +1,42 @@
 import { getCurrentProfile } from "@/db/profiles";
 import { redirect } from "next/navigation";
-import { getActiveEventKeys, getCachedMatches, getAllPoolSummaries } from "@/db/bets";
+import { getAllPoolSummaries } from "@/db/bets";
 import { getCurrentEvents } from "@/lib/tba";
 import { getUserFavoriteEvents } from "@/app/actions/favorites";
 import { EventsList } from "@/components/events-list";
+import { createClient } from "@/lib/supabase/server";
+import type { MatchCache } from "@/lib/types";
 
 export default async function EventsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [eventKeys, poolMap, favoriteKeys, tbaEvents] = await Promise.all([
-    getActiveEventKeys(),
+  const supabase = await createClient();
+
+  const [poolMap, favoriteKeys, tbaEvents, { data: allMatches }] = await Promise.all([
     getAllPoolSummaries(),
     getUserFavoriteEvents(profile.id),
     getCurrentEvents(),
+    supabase
+      .from("match_cache")
+      .select("event_key, event_name, match_key, is_complete, scheduled_time")
+      .order("scheduled_time", { ascending: true })
+      .limit(20000),
   ]);
 
   const favoriteSet = new Set(favoriteKeys);
+  const now = new Date().toISOString();
 
-  // Build event summaries from cached data
+  // Group matches by event
+  const eventMap = new Map<string, { name: string; matches: typeof allMatches }>();
+  for (const m of (allMatches ?? []) as Pick<MatchCache, "event_key" | "event_name" | "match_key" | "is_complete" | "scheduled_time">[]) {
+    if (!eventMap.has(m.event_key)) {
+      eventMap.set(m.event_key, { name: m.event_name, matches: [] });
+    }
+    eventMap.get(m.event_key)!.matches!.push(m);
+  }
+
+  // Build event summaries
   const eventSummaries: {
     key: string;
     name: string;
@@ -31,35 +49,32 @@ export default async function EventsPage() {
     isFavorite: boolean;
   }[] = [];
 
-  for (const ek of eventKeys) {
-    const matches = await getCachedMatches(ek);
-    if (matches.length === 0) continue;
+  for (const [ek, { name, matches }] of eventMap) {
+    const matchList = matches as Pick<MatchCache, "event_key" | "event_name" | "match_key" | "is_complete" | "scheduled_time">[];
+    if (matchList.length === 0) continue;
 
-    const now = new Date().toISOString();
-    const completed = matches.filter((m) => m.is_complete || (m.scheduled_time && m.scheduled_time < now));
-    const upcoming = matches.filter((m) => !m.is_complete && (!m.scheduled_time || m.scheduled_time >= now));
+    const completed = matchList.filter((m) => m.is_complete || (m.scheduled_time && m.scheduled_time < now));
+    const upcoming = matchList.filter((m) => !m.is_complete && (!m.scheduled_time || m.scheduled_time >= now));
 
     let volume = 0;
-    for (const m of matches) {
+    for (const m of matchList) {
       const pool = poolMap.get(m.match_key);
       if (pool) volume += pool.total_pool;
     }
 
-    const sorted = matches
+    const sorted = matchList
       .filter((m) => m.scheduled_time)
       .sort((a, b) => (a.scheduled_time ?? "").localeCompare(b.scheduled_time ?? ""));
-    const earliest = sorted[0];
-    const latest = sorted[sorted.length - 1];
 
     eventSummaries.push({
       key: ek,
-      name: matches[0].event_name,
-      totalMatches: matches.length,
+      name,
+      totalMatches: matchList.length,
       completedMatches: completed.length,
       upcomingMatches: upcoming.length,
       totalVolume: volume,
-      startTime: earliest?.scheduled_time ?? null,
-      endTime: latest?.scheduled_time ?? null,
+      startTime: sorted[0]?.scheduled_time ?? null,
+      endTime: sorted[sorted.length - 1]?.scheduled_time ?? null,
       isFavorite: favoriteSet.has(ek),
     });
   }
@@ -76,8 +91,7 @@ export default async function EventsPage() {
   });
 
   // "All" tab: show favorites + synced events from last 2 weeks
-  const now = new Date();
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const recentEvents = eventSummaries.filter((e) => {
     if (e.isFavorite) return true;
     if (e.upcomingMatches > 0) return true;
@@ -87,15 +101,15 @@ export default async function EventsPage() {
   });
 
   // Show unsynced TBA events starting in the next 3 days
-  const syncedKeys = new Set(eventKeys);
-  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const syncedKeys = new Set(eventMap.keys());
+  const nowDate = new Date();
+  const threeDaysFromNow = new Date(nowDate.getTime() + 3 * 24 * 60 * 60 * 1000);
   const upcomingTbaEvents = tbaEvents
     .filter((e) => {
       if (syncedKeys.has(e.key)) return false;
       const start = new Date(e.start_date);
       const end = new Date(e.end_date + "T23:59:59");
-      // Show if starting within 3 days OR currently running
-      return (start <= threeDaysFromNow && end >= now);
+      return (start <= threeDaysFromNow && end >= nowDate);
     })
     .map((e) => ({
       key: e.key,

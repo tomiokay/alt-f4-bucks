@@ -229,7 +229,19 @@ export function TrendingMarkets({
               />
             )
           )}
-          {matches.length === 0 && browsableMarkets.length === 0 && <EmptyState />}
+          {matches.length === 0 && browsableMarkets.length === 0 && completed.length > 0 && (
+            [...completed]
+              .sort((a, b) => {
+                const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
+                const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
+                return bTime.localeCompare(aTime);
+              })
+              .slice(0, 12)
+              .map((item) => (
+                <MarketCard key={item.match.match_key} item={item} />
+              ))
+          )}
+          {matches.length === 0 && browsableMarkets.length === 0 && completed.length === 0 && <EmptyState />}
         </div>
       )}
 
@@ -243,7 +255,20 @@ export function TrendingMarkets({
               onBetBlue={() => openSlip(item.match, "blue")}
             />
           ))}
-          {matches.length === 0 && <EmptyState />}
+          {/* Show recent completed if no upcoming */}
+          {matches.length === 0 && completed.length > 0 && (
+            [...completed]
+              .sort((a, b) => {
+                const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
+                const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
+                return bTime.localeCompare(aTime);
+              })
+              .slice(0, 12)
+              .map((item) => (
+                <MarketCard key={item.match.match_key} item={item} />
+              ))
+          )}
+          {matches.length === 0 && completed.length === 0 && <EmptyState />}
         </div>
       )}
 

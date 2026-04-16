@@ -479,10 +479,12 @@ function MatchSlide({
       <div className="flex flex-col md:flex-row">
         {/* Left side: title, teams, bet buttons, activity */}
         <div className="flex-1 min-w-0 px-5 pb-4">
-          {/* Title */}
-          <h2 className="text-[18px] font-semibold text-[#e6edf3] leading-tight mb-1">
-            {match.red_teams.join(", ")} vs {match.blue_teams.join(", ")}
-          </h2>
+          {/* Title — links to market */}
+          <Link href={`/market/${encodeURIComponent(match.match_key)}`}>
+            <h2 className="text-[18px] font-semibold text-[#e6edf3] leading-tight mb-1 hover:text-[#58a6ff] transition-colors cursor-pointer">
+              {match.red_teams.join(", ")} vs {match.blue_teams.join(", ")}
+            </h2>
+          </Link>
 
           {/* Time + status */}
           <div className="flex items-center gap-3 mb-4">
@@ -658,9 +660,11 @@ function PredictionSlide({
             {market.event_key}
           </Link>
         </div>
-        <h2 className="text-[18px] font-semibold text-[#e6edf3] leading-tight">
-          {market.title}
-        </h2>
+        <Link href={market.match_key ? `/market/${encodeURIComponent(market.match_key)}` : `/events/${market.event_key}`}>
+          <h2 className="text-[18px] font-semibold text-[#e6edf3] leading-tight hover:text-[#58a6ff] transition-colors cursor-pointer">
+            {market.title}
+          </h2>
+        </Link>
         {market.description && (
           <p className="text-[12px] text-[#484f58] mt-1">
             {market.description}

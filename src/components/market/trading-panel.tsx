@@ -18,6 +18,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const submitting = useRef(false);
 
   const cutoffTime = match.scheduled_time ? new Date(new Date(match.scheduled_time).getTime() - 5 * 60 * 1000) : null;
@@ -30,10 +31,15 @@ export function TradingPanel({ match, odds, balance }: Props) {
   const presets = [1, 5, 10, 50, 100].filter((p) => p <= balance);
 
   async function handleSubmit() {
+    if (!confirm) {
+      setConfirm(true);
+      return;
+    }
     if (submitting.current || !isBettable) return;
     submitting.current = true;
     setError(null);
     setLoading(true);
+    setConfirm(false);
 
     const formData = new FormData();
     formData.set("matchKey", match.match_key);
@@ -63,7 +69,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
         {/* Side toggle */}
         <div className="flex gap-2">
           <button
-            onClick={() => setSide("red")}
+            onClick={() => { setSide("red"); setConfirm(false); }}
             className={cn(
               "flex-1 rounded-lg py-2 text-[13px] font-semibold transition-colors",
               side === "red"
@@ -74,7 +80,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
             Red {odds.redPct}¢
           </button>
           <button
-            onClick={() => setSide("blue")}
+            onClick={() => { setSide("blue"); setConfirm(false); }}
             className={cn(
               "flex-1 rounded-lg py-2 text-[13px] font-semibold transition-colors",
               side === "blue"
@@ -101,7 +107,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
               min={1}
               max={balance}
               value={amount}
-              onChange={(e) => setAmount(Math.max(1, parseInt(e.target.value) || 1))}
+              onChange={(e) => { setAmount(Math.max(1, parseInt(e.target.value) || 1)); setConfirm(false); }}
               className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] pl-7 pr-3 text-[14px] text-[#e6edf3] focus:border-[#388bfd] focus:outline-none"
             />
           </div>
@@ -109,7 +115,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
             {presets.map((p) => (
               <button
                 key={p}
-                onClick={() => setAmount(p)}
+                onClick={() => { setAmount(p); setConfirm(false); }}
                 className={cn(
                   "flex-1 rounded-md py-1.5 text-[11px] font-medium transition-colors border",
                   amount === p
@@ -121,7 +127,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
               </button>
             ))}
             <button
-              onClick={() => setAmount(balance)}
+              onClick={() => { setAmount(balance); setConfirm(false); }}
               className="flex-1 rounded-md py-1.5 text-[11px] font-medium border border-[#21262d] text-[#7d8590] hover:text-[#e6edf3] transition-colors"
             >
               Max
@@ -144,7 +150,15 @@ export function TradingPanel({ match, odds, balance }: Props) {
         </div>
 
         {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
-        {success && <p className="text-[12px] text-[#22c55e]">Trade confirmed!</p>}
+        {success && <p className="text-[12px] text-[#22c55e]">Bet placed!</p>}
+
+        {confirm && (
+          <div className="rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/30 px-3 py-2">
+            <p className="text-[12px] text-[#f59e0b] font-medium">
+              Bet ${amount} on {side === "red" ? "Red" : "Blue"}? Click again to confirm.
+            </p>
+          </div>
+        )}
 
         {isBettable ? (
           <button
@@ -159,7 +173,7 @@ export function TradingPanel({ match, odds, balance }: Props) {
                 : "bg-[#21262d] text-[#484f58] cursor-not-allowed"
             )}
           >
-            {loading ? "Placing..." : `Buy ${side === "red" ? "Red" : "Blue"}`}
+            {loading ? "Placing..." : confirm ? `Confirm $${amount} on ${side === "red" ? "Red" : "Blue"}` : `Bet ${side === "red" ? "Red" : "Blue"}`}
           </button>
         ) : (
           <div className="text-center py-2 text-[13px] text-[#484f58]">

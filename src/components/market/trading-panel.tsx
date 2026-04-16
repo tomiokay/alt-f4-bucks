@@ -54,14 +54,9 @@ export function TradingPanel({ match, odds, balance }: Props) {
 
   return (
     <div className="rounded-xl bg-[#161b22] overflow-hidden">
-      {/* Buy / Sell tabs */}
-      <div className="flex border-b border-[#21262d]">
-        <button className="flex-1 py-3 text-[13px] font-medium text-[#e6edf3] border-b-2 border-[#e6edf3]">
-          Buy
-        </button>
-        <button className="flex-1 py-3 text-[13px] font-medium text-[#484f58]" disabled>
-          Sell
-        </button>
+      {/* Header */}
+      <div className="border-b border-[#21262d] px-4 py-3">
+        <span className="text-[13px] font-medium text-[#e6edf3]">Place Bet</span>
       </div>
 
       <div className="p-4 space-y-4">

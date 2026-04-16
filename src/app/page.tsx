@@ -106,11 +106,11 @@ async function HomeContent() {
   );
 
   const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-  const breaking = [...completed]
-    .filter((e) => {
-      const time = e.match.actual_time ?? e.match.scheduled_time ?? "";
-      return time >= twoWeeksAgo;
-    })
+  const recentCompleted = completed.filter((e) => {
+    const time = e.match.actual_time ?? e.match.scheduled_time ?? "";
+    return time >= twoWeeksAgo;
+  });
+  const breaking = [...recentCompleted]
     .sort((a, b) => {
       const aTime = a.match.actual_time ?? a.match.scheduled_time ?? "";
       const bTime = b.match.actual_time ?? b.match.scheduled_time ?? "";
@@ -158,7 +158,7 @@ async function HomeContent() {
         />
         <TrendingMarkets
           matches={upcoming}
-          completed={completed}
+          completed={recentCompleted}
           pools={pools}
           balance={balance}
           predictionMarkets={allPredMarkets}
@@ -166,12 +166,12 @@ async function HomeContent() {
           resolvedPredictionMarkets={resolvedPredMarkets}
         />
         <div className="lg:hidden space-y-5">
-          <BreakingNews items={breaking} allCompleted={completed} />
+          <BreakingNews items={breaking} allCompleted={recentCompleted} />
           <HotTopics topics={hotTopics} />
         </div>
       </div>
       <div className="hidden lg:block w-[320px] shrink-0 space-y-5">
-        <BreakingNews items={breaking} allCompleted={completed} />
+        <BreakingNews items={breaking} allCompleted={recentCompleted} />
         <HotTopics topics={hotTopics} />
       </div>
     </div>

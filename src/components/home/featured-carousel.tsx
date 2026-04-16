@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { BetSlip } from "@/components/bet-slip";
@@ -17,6 +17,7 @@ import type {
 
 type Props = {
   featured: EnrichedMatch | null;
+  topMarkets?: EnrichedMatch[];
   pools: Record<string, PoolSummary>;
   predictions: Record<string, { redWinProb: number; blueWinProb: number }>;
   balance: number;
@@ -37,6 +38,7 @@ const COMP_LABELS: Record<string, string> = {
 
 export function FeaturedCarousel({
   featured,
+  topMarkets = [],
   pools,
   predictions,
   balance,
@@ -45,13 +47,17 @@ export function FeaturedCarousel({
   predictionPools,
 }: Props) {
   const [current, setCurrent] = useState(0);
+  const [slideDir, setSlideDir] = useState<"left" | "right">("left");
+  const [animating, setAnimating] = useState(false);
   const [slipOpen, setSlipOpen] = useState(false);
   const [slipSide, setSlipSide] = useState<"red" | "blue">("red");
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  // Build slides: featured match first, then prediction markets
+  // Build slides: top markets by pool size, then prediction markets
   const slides: Slide[] = [];
-  if (featured) {
-    slides.push({ type: "match", data: featured });
+  const matchSlides = topMarkets.length > 0 ? topMarkets : featured ? [featured] : [];
+  for (const m of matchSlides) {
+    slides.push({ type: "match", data: m });
   }
   for (const pm of predictionMarkets) {
     if (pm.status !== "open") continue;
@@ -60,20 +66,49 @@ export function FeaturedCarousel({
 
   const slideCount = slides.length;
 
+  function goTo(index: number, dir: "left" | "right") {
+    if (animating || index === current) return;
+    setSlideDir(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrent(index);
+      setAnimating(false);
+    }, 200);
+  }
+
   const next = useCallback(() => {
-    if (slideCount > 1) setCurrent((c) => (c + 1) % slideCount);
+    if (slideCount > 1) {
+      setSlideDir("left");
+      setAnimating(true);
+      setTimeout(() => {
+        setCurrent((c) => (c + 1) % slideCount);
+        setAnimating(false);
+      }, 200);
+    }
   }, [slideCount]);
 
   const prev = useCallback(() => {
-    if (slideCount > 1) setCurrent((c) => (c - 1 + slideCount) % slideCount);
+    if (slideCount > 1) {
+      setSlideDir("right");
+      setAnimating(true);
+      setTimeout(() => {
+        setCurrent((c) => (c - 1 + slideCount) % slideCount);
+        setAnimating(false);
+      }, 200);
+    }
   }, [slideCount]);
 
-  // Auto-advance every 8 seconds
+  // Auto-advance every 20 seconds, reset on manual interaction
   useEffect(() => {
     if (slideCount <= 1) return;
-    const timer = setInterval(next, 8000);
-    return () => clearInterval(timer);
+    timerRef.current = setInterval(next, 20000);
+    return () => clearInterval(timerRef.current);
   }, [next, slideCount]);
+
+  function resetTimer() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(next, 20000);
+  }
 
   if (slides.length === 0) return null;
 
@@ -87,29 +122,40 @@ export function FeaturedCarousel({
   return (
     <>
       <div className="rounded-xl bg-[#161b22] overflow-hidden relative">
-        {/* Slide content */}
-        {activeSlide.type === "match" ? (
-          <MatchSlide
-            enriched={activeSlide.data}
-            pools={pools}
-            predictions={predictions}
-            oddsHistory={oddsHistory}
-            onBet={openSlip}
-          />
-        ) : (
-          <PredictionSlide
-            market={activeSlide.data}
-            pools={predictionPools[activeSlide.data.id] ?? {}}
-            balance={balance}
-          />
-        )}
+        {/* Slide content with animation */}
+        <div
+          className={cn(
+            "transition-all duration-200 ease-in-out",
+            animating
+              ? slideDir === "left"
+                ? "opacity-0 -translate-x-4"
+                : "opacity-0 translate-x-4"
+              : "opacity-100 translate-x-0"
+          )}
+        >
+          {activeSlide.type === "match" ? (
+            <MatchSlide
+              enriched={activeSlide.data}
+              pools={pools}
+              predictions={predictions}
+              oddsHistory={oddsHistory}
+              onBet={openSlip}
+            />
+          ) : (
+            <PredictionSlide
+              market={activeSlide.data}
+              pools={predictionPools[activeSlide.data.id] ?? {}}
+              balance={balance}
+            />
+          )}
+        </div>
 
         {/* Navigation arrows + dots */}
         {slideCount > 1 && (
           <>
             {/* Arrows */}
             <button
-              onClick={prev}
+              onClick={() => { prev(); resetTimer(); }}
               className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-[#0d1117]/80 flex items-center justify-center text-[#7d8590] hover:text-[#e6edf3] hover:bg-[#0d1117] transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -117,7 +163,7 @@ export function FeaturedCarousel({
               </svg>
             </button>
             <button
-              onClick={next}
+              onClick={() => { next(); resetTimer(); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-[#0d1117]/80 flex items-center justify-center text-[#7d8590] hover:text-[#e6edf3] hover:bg-[#0d1117] transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -130,7 +176,7 @@ export function FeaturedCarousel({
               {slides.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => setCurrent(i)}
+                  onClick={() => { goTo(i, i > current ? "left" : "right"); resetTimer(); }}
                   className={cn(
                     "h-1.5 rounded-full transition-all",
                     i === current ? "w-4 bg-[#e6edf3]" : "w-1.5 bg-[#30363d] hover:bg-[#484f58]"

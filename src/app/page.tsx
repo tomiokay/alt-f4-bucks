@@ -97,7 +97,10 @@ async function HomeContent() {
     e.match.is_complete || (e.match.scheduled_time && e.match.scheduled_time < now)
   );
 
-  const featured = [...upcoming].sort((a, b) => b.odds.totalPool - a.odds.totalPool)[0] ?? null;
+  // Top 10 markets by pool size for the carousel
+  const allByPool = [...upcoming, ...completed].sort((a, b) => b.odds.totalPool - a.odds.totalPool);
+  const topMarkets = allByPool.filter((e) => e.odds.totalPool > 0).slice(0, 10);
+  const featured = topMarkets[0] ?? null;
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];
 
   const carouselPredMarkets = allPredMarkets.filter(
@@ -149,6 +152,7 @@ async function HomeContent() {
       <div className="flex-1 min-w-0 space-y-6">
         <FeaturedCarousel
           featured={featured}
+          topMarkets={topMarkets}
           pools={pools}
           predictions={{}}
           balance={balance}

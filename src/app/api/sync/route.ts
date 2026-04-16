@@ -19,20 +19,36 @@ export async function GET(request: NextRequest) {
 
   const service = await createServiceClient();
 
+  // Support syncing a single event via ?event=2026onwel
+  const singleEvent = request.nextUrl.searchParams.get("event");
+
   const currentEvents = await getCurrentEvents();
   const eventNameMap = new Map(currentEvents.map((e) => [e.key, e.name]));
 
-  const trackedKeys = await getActiveEventKeys();
-  const allKeys = [...new Set([
-    ...currentEvents.map((e) => e.key),
-    ...trackedKeys,
-  ])];
+  let allKeys: string[];
+  if (singleEvent) {
+    allKeys = [singleEvent];
+  } else {
+    const trackedKeys = await getActiveEventKeys();
+    // On free tier, limit to tracked events + recent TBA events (last 2 weeks)
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const twoWeeksAhead = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const recentTbaKeys = currentEvents
+      .filter((e) => {
+        const end = new Date(e.end_date + "T23:59:59");
+        const start = new Date(e.start_date);
+        return end >= twoWeeksAgo && start <= twoWeeksAhead;
+      })
+      .map((e) => e.key);
+
+    allKeys = [...new Set([...recentTbaKeys, ...trackedKeys])];
+  }
 
   let totalSynced = 0;
   let eventsWithMatches = 0;
   let fetchErrors = 0;
 
-  // Process events sequentially but with cached TBA responses
   for (const eventKey of allKeys) {
     try {
       const matches = await getEventMatches(eventKey);

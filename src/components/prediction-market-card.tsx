@@ -67,6 +67,7 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
     ranking_top1: { icon: "#1", color: "from-blue-500 to-cyan-500" },
     ranking_top8: { icon: "T8", color: "from-green-500 to-emerald-500" },
     ranking_position: { icon: `#${market.line ? Math.round(market.line) : "?"}`, color: "from-purple-500 to-pink-500" },
+    custom: { icon: "C", color: "from-indigo-500 to-violet-500" },
   }[market.type] ?? { icon: "?", color: "from-gray-500 to-gray-600" };
 
   return (

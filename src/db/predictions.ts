@@ -73,6 +73,55 @@ export async function getAllPredictionPools(eventKey: string): Promise<Map<strin
   return map;
 }
 
+export async function getAllCustomMarkets(): Promise<PredictionMarket[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prediction_markets")
+    .select("*")
+    .eq("is_custom", true)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []) as PredictionMarket[];
+}
+
+export async function getFeaturedCustomMarkets(): Promise<PredictionMarket[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prediction_markets")
+    .select("*")
+    .eq("is_custom", true)
+    .eq("featured", true)
+    .eq("status", "open")
+    .order("created_at", { ascending: false });
+
+  return (data ?? []) as PredictionMarket[];
+}
+
+export async function getAllOpenPredictionMarkets(): Promise<PredictionMarket[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prediction_markets")
+    .select("*")
+    .in("status", ["open", "closed"])
+    .order("created_at", { ascending: false });
+
+  return (data ?? []) as PredictionMarket[];
+}
+
+export async function getAllPredictionPoolSummaries(): Promise<Map<string, Map<string, PredictionPoolOption>>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prediction_pool_summary")
+    .select("*");
+
+  const map = new Map<string, Map<string, PredictionPoolOption>>();
+  for (const row of (data ?? []) as PredictionPoolOption[]) {
+    if (!map.has(row.market_id)) map.set(row.market_id, new Map());
+    map.get(row.market_id)!.set(row.option_key, row);
+  }
+  return map;
+}
+
 export async function getUserPredictionBets(userId: string): Promise<PredictionBet[]> {
   const supabase = await createClient();
   const { data } = await supabase

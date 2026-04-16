@@ -12,6 +12,7 @@ import { FeaturedCarousel } from "@/components/home/featured-carousel";
 import { BreakingNews } from "@/components/home/breaking-news";
 import { HotTopics } from "@/components/home/hot-topics";
 import { AllMarkets } from "@/components/home/all-markets";
+import { EventMarkets } from "@/components/home/event-markets";
 import { AutoSync } from "@/components/auto-sync";
 import { HowItWorksButton } from "@/components/how-it-works";
 import type { MatchCache, PoolSummary, MatchOdds, PredictionMarket, PredictionPoolOption } from "@/lib/types";
@@ -150,6 +151,13 @@ export default async function HomePage() {
             predictionMarkets={allPredMarkets}
             predictionPools={allPredPools}
           />
+          {allPredMarkets.length > 0 && (
+            <EventMarkets
+              markets={allPredMarkets}
+              pools={allPredPools}
+              balance={balance}
+            />
+          )}
           <AllMarkets
             upcoming={upcoming}
             trending={trending}

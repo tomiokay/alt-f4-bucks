@@ -181,12 +181,20 @@ export function HowItWorksButton() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="text-[12px] text-[#388bfd] hover:text-[#58a6ff] transition-colors font-medium"
-      >
-        How it works
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setOpen(true)}
+          className="text-[12px] text-[#388bfd] hover:text-[#58a6ff] transition-colors font-medium"
+        >
+          Quick intro
+        </button>
+        <a
+          href="/how-it-works"
+          className="text-[12px] text-[#7d8590] hover:text-[#e6edf3] transition-colors font-medium"
+        >
+          Full guide →
+        </a>
+      </div>
       {open && <HowItWorksModal onClose={() => setOpen(false)} />}
     </>
   );

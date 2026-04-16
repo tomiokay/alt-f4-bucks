@@ -27,11 +27,13 @@ type NavProps = {
 };
 
 const CATEGORY_LINKS = [
-  { href: "/", label: "Trending" },
+  { href: "/", label: "Home" },
+  { href: "/trending", label: "Trending" },
   { href: "/betting", label: "Markets" },
   { href: "/events", label: "Events" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/dashboard", label: "Portfolio" },
+  { href: "/how-it-works", label: "Guide" },
   { href: "/manager", label: "Admin", role: ["manager", "admin"] as string[] },
   { href: "/dev", label: "Dev", role: ["manager", "admin"] as string[] },
 ];

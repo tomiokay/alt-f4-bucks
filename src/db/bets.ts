@@ -93,7 +93,8 @@ export async function getMatchByKey(matchKey: string): Promise<MatchCache | null
 }
 
 export async function getActiveEventKeys(): Promise<string[]> {
-  const supabase = await createClient();
+  const { createServiceClient } = await import("@/lib/supabase/server");
+  const supabase = await createServiceClient();
   // Fetch all event keys — need enough rows to cover all events
   const { data } = await supabase
     .from("match_cache")

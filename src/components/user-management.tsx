@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setBanStatus, adminRenameUser } from "@/app/actions/settings";
+import { setBanStatus, adminRenameUser, adminDeleteUser } from "@/app/actions/settings";
 import { resetUser } from "@/app/actions/dev";
 import { cn } from "@/lib/utils";
-import { Pencil, X, Check, RotateCcw } from "lucide-react";
+import { Pencil, X, Check, RotateCcw, Trash2 } from "lucide-react";
 import type { Profile } from "@/lib/types";
 
 type Props = {
@@ -199,6 +199,24 @@ export function UserManagement({ members, currentUserId }: Props) {
                   >
                     <RotateCcw className="h-3 w-3" />
                   </button>
+                {!isSelf && (
+                  <button
+                    onClick={() => {
+                      if (!confirm(`DELETE ${names[member.id] || member.display_name}'s account? This permanently removes them and frees their email. Cannot be undone.`)) return;
+                      startTransition(async () => {
+                        const res = await adminDeleteUser(member.id);
+                        if (res.error) {
+                          setErrors((e) => ({ ...e, [member.id]: res.error! }));
+                        }
+                      });
+                    }}
+                    disabled={isLoading}
+                    className="h-7 px-2 rounded-md text-[11px] font-semibold bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 border border-[#ef4444]/30 transition-colors disabled:opacity-40"
+                    title="Delete account"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
               <button
                 onClick={() => toggleBan(member)}
                 disabled={isLoading || isSelf}

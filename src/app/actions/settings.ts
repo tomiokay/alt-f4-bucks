@@ -206,6 +206,47 @@ export async function adminRenameUser(userId: string, newName: string) {
   return { success: true };
 }
 
+// Admin: delete a user account entirely (frees up email for re-registration)
+export async function adminDeleteUser(userId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["manager", "admin"].includes(profile.role)) {
+    return { error: "Not authorized" };
+  }
+
+  if (userId === user.id) return { error: "You cannot delete your own account." };
+
+  const service = await createServiceClient();
+
+  // Delete all user data
+  await service.from("pool_bets").delete().eq("user_id", userId);
+  await service.from("prediction_bets").delete().eq("user_id", userId);
+  await service.from("comments").delete().eq("user_id", userId);
+  await service.from("notifications").delete().eq("user_id", userId);
+  await service.from("transactions").delete().eq("to_user_id", userId);
+  await service.from("purchases").delete().eq("user_id", userId);
+  await service.from("profiles").delete().eq("id", userId);
+
+  // Delete from Supabase Auth (frees up the email)
+  const { error: authError } = await service.auth.admin.deleteUser(userId);
+  if (authError) return { error: authError.message };
+
+  revalidatePath("/manager");
+  revalidatePath("/leaderboard");
+  return { success: true };
+}
+
 // Admin: ban or unban a user
 export async function setBanStatus(userId: string, banned: boolean) {
   const supabase = await createClient();

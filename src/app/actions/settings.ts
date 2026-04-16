@@ -103,7 +103,7 @@ export async function adminSetTeamNumber(formData: FormData) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !["manager", "admin"].includes(profile.role)) {
+  if (!profile || !["manager", "admin", "dev"].includes(profile.role)) {
     return { error: "Not authorized" };
   }
 
@@ -144,7 +144,7 @@ export async function adminBulkSetTeamNumber(formData: FormData) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !["manager", "admin"].includes(profile.role)) {
+  if (!profile || !["manager", "admin", "dev"].includes(profile.role)) {
     return { error: "Not authorized" };
   }
 
@@ -182,7 +182,7 @@ export async function adminRenameUser(userId: string, newName: string) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !["manager", "admin"].includes(profile.role)) {
+  if (!profile || !["manager", "admin", "dev"].includes(profile.role)) {
     return { error: "Not authorized" };
   }
 
@@ -207,7 +207,7 @@ export async function adminRenameUser(userId: string, newName: string) {
 }
 
 // Admin: change a user's role
-export async function adminSetRole(userId: string, role: "member" | "manager" | "admin") {
+export async function adminSetRole(userId: string, role: "member" | "manager" | "admin" | "dev") {
   const supabase = await createClient();
   const {
     data: { user },
@@ -221,8 +221,8 @@ export async function adminSetRole(userId: string, role: "member" | "manager" | 
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "admin") {
-    return { error: "Only admins can change roles" };
+  if (!profile || !["admin", "dev"].includes(profile.role)) {
+    return { error: "Only admins or devs can change roles" };
   }
 
   if (userId === user.id) return { error: "You cannot change your own role." };
@@ -254,7 +254,7 @@ export async function adminDeleteUser(userId: string) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !["manager", "admin"].includes(profile.role)) {
+  if (!profile || !["manager", "admin", "dev"].includes(profile.role)) {
     return { error: "Not authorized" };
   }
 
@@ -295,7 +295,7 @@ export async function setBanStatus(userId: string, banned: boolean) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !["manager", "admin"].includes(profile.role)) {
+  if (!profile || !["manager", "admin", "dev"].includes(profile.role)) {
     return { error: "Not authorized" };
   }
 

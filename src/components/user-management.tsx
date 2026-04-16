@@ -186,8 +186,7 @@ export function UserManagement({ members, currentUserId }: Props) {
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                {!isSelf && (
-                  <button
+                <button
                     onClick={() => {
                       if (!confirm(`Reset ${names[member.id] || member.display_name}'s account? This deletes all their bets and resets to $10,000.`)) return;
                       startTransition(async () => {
@@ -200,7 +199,6 @@ export function UserManagement({ members, currentUserId }: Props) {
                   >
                     <RotateCcw className="h-3 w-3" />
                   </button>
-                )}
               <button
                 onClick={() => toggleBan(member)}
                 disabled={isLoading || isSelf}

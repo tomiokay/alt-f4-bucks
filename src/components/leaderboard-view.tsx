@@ -129,15 +129,17 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                       ${entry.balance.toLocaleString()}
                     </span>
 
-                    <span className={cn(
-                      "text-right text-[14px] tabular-nums font-mono hidden sm:block",
-                      entry.balance > 10000 ? "text-[#22c55e]" : entry.balance < 10000 ? "text-[#ef4444]" : "text-[#7d8590]"
-                    )}>
-                      {entry.balance >= 10000
-                        ? `+$${(entry.balance - 10000).toLocaleString()}`
-                        : `-$${(10000 - entry.balance).toLocaleString()}`
-                      }
-                    </span>
+                    {(() => {
+                      const pnl = entry.betting_pnl ?? (entry.balance - 10000);
+                      return (
+                        <span className={cn(
+                          "text-right text-[14px] tabular-nums font-mono hidden sm:block",
+                          pnl > 0 ? "text-[#22c55e]" : pnl < 0 ? "text-[#ef4444]" : "text-[#7d8590]"
+                        )}>
+                          {pnl >= 0 ? `+$${pnl.toLocaleString()}` : `-$${Math.abs(pnl).toLocaleString()}`}
+                        </span>
+                      );
+                    })()}
                   </Link>
                 );
               })

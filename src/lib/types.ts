@@ -54,6 +54,7 @@ export type LeaderboardEntry = {
   display_name: string;
   team_number: string | null;
   balance: number;
+  betting_pnl?: number;
 };
 
 // --- Betting (Pool / Parimutuel) ---

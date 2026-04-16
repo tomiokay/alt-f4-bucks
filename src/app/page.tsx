@@ -99,7 +99,14 @@ async function HomeContent() {
   );
 
   // Top 10 markets by pool size for the carousel
-  const allByPool = [...upcoming, ...completed].sort((a, b) => b.odds.totalPool - a.odds.totalPool);
+  // Include recently resolved big markets (resolved in last 3 hours)
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  const recentlyResolvedBig = recentCompleted.filter((e) => {
+    if (!e.match.is_complete) return false;
+    const resolvedTime = e.match.actual_time ?? e.match.scheduled_time ?? "";
+    return resolvedTime >= threeHoursAgo && e.odds.totalPool >= 500;
+  });
+  const allByPool = [...upcoming, ...recentlyResolvedBig].sort((a, b) => b.odds.totalPool - a.odds.totalPool);
   const topMarkets = allByPool.filter((e) => e.odds.totalPool > 0).slice(0, 10);
   const featured = topMarkets[0] ?? null;
   const featuredHistory = featured ? await getOddsHistory(featured.match.match_key) : [];

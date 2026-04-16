@@ -25,7 +25,7 @@ type Props = {
 };
 
 type TabKey = "all" | "matches" | "events" | "rankings" | "custom";
-type SortKey = "activity" | "volume" | "newest";
+type SortKey = "activity" | "volume" | "newest" | "resolved";
 
 export function TrendingMarkets({
   matches,
@@ -84,6 +84,7 @@ export function TrendingMarkets({
     { key: "activity", label: "Most Active" },
     { key: "volume", label: "Highest Volume" },
     { key: "newest", label: "Newest" },
+    { key: "resolved", label: "Recently Resolved" },
   ];
 
   // Sort helpers
@@ -122,12 +123,23 @@ export function TrendingMarkets({
 
   function getUnifiedItems(): UnifiedItem[] {
     const items: UnifiedItem[] = [];
-    // Include upcoming matches + completed matches with bets
-    for (const m of matches) items.push({ kind: "match", data: m });
-    for (const m of completed) {
-      if (m.odds.totalPool > 0) items.push({ kind: "match", data: m });
+
+    if (sort === "resolved") {
+      // Only show resolved markets with bets
+      for (const m of completed) {
+        if (m.odds.totalPool > 0) items.push({ kind: "match", data: m });
+      }
+      for (const p of resolvedPredictionMarkets) {
+        items.push({ kind: "prediction", data: p });
+      }
+    } else {
+      // Include upcoming matches + completed matches with bets
+      for (const m of matches) items.push({ kind: "match", data: m });
+      for (const m of completed) {
+        if (m.odds.totalPool > 0) items.push({ kind: "match", data: m });
+      }
+      for (const p of browsableMarkets) items.push({ kind: "prediction", data: p });
     }
-    for (const p of browsableMarkets) items.push({ kind: "prediction", data: p });
 
     return items.sort((a, b) => {
       const aActivity =
@@ -148,6 +160,13 @@ export function TrendingMarkets({
         return bPool - aPool;
       }
       if (sort === "volume") return bPool - aPool;
+      if (sort === "resolved") {
+        // Sort by most recent completion time, highest volume first for ties
+        const aTime = a.kind === "match" ? (a.data.match.actual_time ?? a.data.match.scheduled_time ?? "") : (a.data.resolved_at ?? a.data.created_at);
+        const bTime = b.kind === "match" ? (b.data.match.actual_time ?? b.data.match.scheduled_time ?? "") : (b.data.resolved_at ?? b.data.created_at);
+        if (bTime !== aTime) return bTime.localeCompare(aTime);
+        return bPool - aPool;
+      }
       const aTime =
         a.kind === "match"
           ? a.data.match.scheduled_time ?? a.data.match.fetched_at

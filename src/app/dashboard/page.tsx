@@ -16,9 +16,9 @@ export default async function DashboardPage() {
     getUserPredictionBets(profile.id),
   ]);
 
-  // P&L = current balance - starting balance (consistent with leaderboard)
-  const totalPnL = balance - 10000;
+  // P&L = net profit/loss from betting only (excludes admin awards/deductions)
   const settledBets = bets.filter((b) => b.payout !== null);
+  const totalPnL = settledBets.reduce((sum, b) => sum + (b.payout! - b.amount), 0);
   const biggestWin = settledBets
     .filter((b) => b.payout! > b.amount)
     .reduce((max, b) => Math.max(max, b.payout! - b.amount), 0);

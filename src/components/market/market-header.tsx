@@ -40,9 +40,12 @@ export function MarketHeader({ match, odds }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="rounded bg-[#21262d] px-2 py-0.5 text-[11px] font-medium text-[#7d8590]">
+            <Link
+              href={`/events/${match.event_key}`}
+              className="rounded bg-[#21262d] px-2 py-0.5 text-[11px] font-medium text-[#7d8590] hover:text-[#e6edf3] hover:bg-[#30363d] transition-colors"
+            >
               {match.event_name}
-            </span>
+            </Link>
             {(() => {
               const cutoff = match.scheduled_time ? new Date(new Date(match.scheduled_time).getTime() - 5 * 60 * 1000) : null;
               const now = new Date();

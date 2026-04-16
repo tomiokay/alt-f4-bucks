@@ -90,26 +90,17 @@ export default async function EventsPage() {
     return aTime.localeCompare(bTime);
   });
 
-  // "All" tab: show favorites + synced events from last 2 weeks
-  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-  const recentEvents = eventSummaries.filter((e) => {
-    if (e.isFavorite) return true;
-    if (e.upcomingMatches > 0) return true;
-    const latestTime = e.endTime ?? e.startTime;
-    if (latestTime && latestTime >= twoWeeksAgo) return true;
-    return false;
-  });
+  // Show all synced events (filtering is done client-side via tabs)
+  const recentEvents = eventSummaries;
 
-  // Show unsynced TBA events starting in the next 3 days
+  // Show unsynced TBA events (upcoming or currently running)
   const syncedKeys = new Set(eventMap.keys());
   const nowDate = new Date();
-  const threeDaysFromNow = new Date(nowDate.getTime() + 3 * 24 * 60 * 60 * 1000);
   const upcomingTbaEvents = tbaEvents
     .filter((e) => {
       if (syncedKeys.has(e.key)) return false;
-      const start = new Date(e.start_date);
       const end = new Date(e.end_date + "T23:59:59");
-      return (start <= threeDaysFromNow && end >= nowDate);
+      return end >= nowDate; // show anything not yet ended
     })
     .map((e) => ({
       key: e.key,

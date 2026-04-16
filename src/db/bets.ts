@@ -107,34 +107,14 @@ export async function getActiveEventKeys(): Promise<string[]> {
 export async function getAllCachedMatches(): Promise<MatchCache[]> {
   const supabase = await createClient();
 
-  // Only fetch matches from the last 3 weeks + all upcoming/incomplete matches
-  const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+  // Fetch most recent matches first (descending), enough to cover recent events
+  const { data } = await supabase
+    .from("match_cache")
+    .select("*")
+    .order("scheduled_time", { ascending: false, nullsFirst: false })
+    .limit(5000);
 
-  const [{ data: recent }, { data: incomplete }] = await Promise.all([
-    supabase
-      .from("match_cache")
-      .select("*")
-      .gte("scheduled_time", threeWeeksAgo)
-      .order("scheduled_time", { ascending: true })
-      .limit(5000),
-    supabase
-      .from("match_cache")
-      .select("*")
-      .eq("is_complete", false)
-      .order("scheduled_time", { ascending: true })
-      .limit(5000),
-  ]);
-
-  // Merge and deduplicate
-  const seen = new Set<string>();
-  const results: MatchCache[] = [];
-  for (const m of [...(recent ?? []), ...(incomplete ?? [])] as MatchCache[]) {
-    if (!seen.has(m.match_key)) {
-      seen.add(m.match_key);
-      results.push(m);
-    }
-  }
-  return results;
+  return (data ?? []) as MatchCache[];
 }
 
 export async function getEventList(): Promise<{ key: string; name: string }[]> {

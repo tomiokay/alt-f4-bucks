@@ -239,6 +239,223 @@ export async function resetEverything(formData: FormData) {
   return { success: true };
 }
 
+export async function createTestRankingsAndAlliances(formData: FormData) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const eventKey = formData.get("eventKey") as string;
+  if (!eventKey) return { error: "Event key required" };
+
+  // Get all teams from this event's matches
+  const { data: matches } = await service
+    .from("match_cache")
+    .select("red_teams, blue_teams")
+    .eq("event_key", eventKey);
+
+  if (!matches || matches.length === 0) return { error: "No matches found for this event" };
+
+  const teamSet = new Set<string>();
+  for (const m of matches) {
+    for (const t of m.red_teams) teamSet.add(t);
+    for (const t of m.blue_teams) teamSet.add(t);
+  }
+  const teams = [...teamSet];
+
+  // Shuffle teams for random rankings
+  const shuffled = [...teams].sort(() => Math.random() - 0.5);
+
+  // Build fake rankings
+  const rankings = shuffled.map((team, i) => ({
+    team_key: team.startsWith("frc") ? team : `frc${team}`,
+    rank: i + 1,
+  }));
+
+  // Build 8 alliances from top 8 teams (each picks 3 total)
+  const alliances = [];
+  for (let i = 0; i < Math.min(8, Math.floor(shuffled.length / 3)); i++) {
+    const captain = shuffled[i];
+    // Pick 2 more teams that aren't already captains
+    const available = shuffled.filter((t, idx) => idx >= 8 || idx === i);
+    const pick1 = shuffled[8 + i * 2] ?? shuffled[shuffled.length - 1 - i];
+    const pick2 = shuffled[8 + i * 2 + 1] ?? shuffled[shuffled.length - 2 - i];
+
+    alliances.push({
+      name: `Alliance ${i + 1}`,
+      picks: [
+        captain.startsWith("frc") ? captain : `frc${captain}`,
+        (pick1 ?? captain).startsWith("frc") ? pick1 ?? captain : `frc${pick1 ?? captain}`,
+        (pick2 ?? captain).startsWith("frc") ? pick2 ?? captain : `frc${pick2 ?? captain}`,
+      ],
+    });
+  }
+
+  // Now trigger ensureEventMarkets with this fake data
+  const { ensureEventMarkets } = await import("@/app/actions/predictions");
+  const matchData = (matches as { red_teams: string[]; blue_teams: string[] }[]).map((m, i) => ({
+    match_key: `${eventKey}_qm${i + 1}`,
+    comp_level: "qm" as const,
+    is_complete: false,
+    red_teams: m.red_teams,
+    blue_teams: m.blue_teams,
+    red_score: null,
+    blue_score: null,
+  }));
+
+  // Get actual match data from the cache
+  const { data: fullMatches } = await service
+    .from("match_cache")
+    .select("match_key, comp_level, is_complete, red_teams, blue_teams, red_score, blue_score")
+    .eq("event_key", eventKey);
+
+  await ensureEventMarkets(
+    eventKey,
+    fullMatches ?? matchData,
+    {},
+    rankings,
+    alliances
+  );
+
+  revalidatePath("/");
+  revalidatePath("/events");
+  revalidatePath("/betting");
+  return {
+    success: true,
+    teamCount: teams.length,
+    allianceCount: alliances.length,
+    rankingCount: rankings.length,
+  };
+}
+
+export async function createTestPlayoffMatches(formData: FormData) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const eventKey = formData.get("eventKey") as string;
+  if (!eventKey) return { error: "Event key required" };
+
+  // Get event name from existing matches
+  const { data: existingMatch } = await service
+    .from("match_cache")
+    .select("event_name")
+    .eq("event_key", eventKey)
+    .limit(1)
+    .single();
+
+  const eventName = existingMatch?.event_name ?? "Dev Test Event";
+
+  // Get all teams to build alliances
+  const { data: matches } = await service
+    .from("match_cache")
+    .select("red_teams, blue_teams")
+    .eq("event_key", eventKey);
+
+  if (!matches || matches.length === 0) return { error: "No matches found" };
+
+  const teamSet = new Set<string>();
+  for (const m of matches) {
+    for (const t of m.red_teams) teamSet.add(t);
+    for (const t of m.blue_teams) teamSet.add(t);
+  }
+  const teams = [...teamSet].sort(() => Math.random() - 0.5);
+
+  // Build 8 alliances of 3 teams
+  const alliances: string[][] = [];
+  for (let i = 0; i < Math.min(8, Math.floor(teams.length / 3)); i++) {
+    alliances.push(teams.slice(i * 3, i * 3 + 3));
+  }
+
+  if (alliances.length < 2) return { error: "Not enough teams for playoffs" };
+
+  // Create semifinal matches (sf1-1 through sf2-3) and final matches (f1-1 through f1-3)
+  const playoffMatches = [];
+  const baseTime = Date.now() + 48 * 60 * 60 * 1000; // 2 days from now
+
+  // Semifinals: Alliance 1 vs 8, 2 vs 7, 3 vs 6, 4 vs 5
+  const sfMatchups = [
+    [0, Math.min(7, alliances.length - 1)],
+    [1, Math.min(6, alliances.length - 1)],
+    [Math.min(2, alliances.length - 1), Math.min(5, alliances.length - 1)],
+    [Math.min(3, alliances.length - 1), Math.min(4, alliances.length - 1)],
+  ];
+
+  let matchIdx = 0;
+  for (let sf = 0; sf < Math.min(4, Math.floor(alliances.length / 2)); sf++) {
+    const [redIdx, blueIdx] = sfMatchups[sf];
+    for (let game = 1; game <= 3; game++) {
+      matchIdx++;
+      playoffMatches.push({
+        match_key: `${eventKey}_sf${sf + 1}m${game}`,
+        event_key: eventKey,
+        event_name: eventName,
+        comp_level: "sf",
+        match_number: sf * 3 + game,
+        red_teams: alliances[redIdx],
+        blue_teams: alliances[blueIdx],
+        scheduled_time: new Date(baseTime + matchIdx * 30 * 60 * 1000).toISOString(),
+        actual_time: null,
+        red_score: null,
+        blue_score: null,
+        winning_alliance: null,
+        is_complete: false,
+        fetched_at: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Finals: 3 matches
+  for (let game = 1; game <= 3; game++) {
+    matchIdx++;
+    playoffMatches.push({
+      match_key: `${eventKey}_f1m${game}`,
+      event_key: eventKey,
+      event_name: eventName,
+      comp_level: "f",
+      match_number: game,
+      red_teams: alliances[0],
+      blue_teams: alliances[1],
+      scheduled_time: new Date(baseTime + matchIdx * 30 * 60 * 1000).toISOString(),
+      actual_time: null,
+      red_score: null,
+      blue_score: null,
+      winning_alliance: null,
+      is_complete: false,
+      fetched_at: new Date().toISOString(),
+    });
+  }
+
+  const { error } = await service.from("match_cache").upsert(playoffMatches, { onConflict: "match_key" });
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/betting");
+  revalidatePath("/events");
+  return { success: true, matchCount: playoffMatches.length, allianceCount: alliances.length };
+}
+
+export async function resolveTestPredictionMarket(formData: FormData) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  const marketId = formData.get("marketId") as string;
+  const correctOption = formData.get("correctOption") as string;
+
+  if (!marketId || !correctOption) return { error: "Market ID and correct option required" };
+
+  try {
+    const { data: count } = await service.rpc("resolve_prediction_market", {
+      p_market_id: marketId,
+      p_correct_option: correctOption,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    return { success: true, resolved: count ?? 0 };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to resolve" };
+  }
+}
+
 export async function updateTeamNumber(formData: FormData) {
   await requireAdmin();
   const service = await createServiceClient();

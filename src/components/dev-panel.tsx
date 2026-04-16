@@ -2,14 +2,28 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createTestMatch, createTestEvent, resolveTestMatch, grantBucks, resetEverything, updateTeamNumber } from "@/app/actions/dev";
-import type { MatchCache, Profile } from "@/lib/types";
+import {
+  createTestMatch,
+  createTestEvent,
+  resolveTestMatch,
+  grantBucks,
+  resetEverything,
+  updateTeamNumber,
+  createTestRankingsAndAlliances,
+  createTestPlayoffMatches,
+  resolveTestPredictionMarket,
+} from "@/app/actions/dev";
+import type { MatchCache, Profile, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
 type Props = {
   userId: string;
   balance: number;
   allProfiles?: Profile[];
   unresolvedMatches: MatchCache[];
+  eventKeys?: string[];
+  eventNames?: Record<string, string>;
+  predictionMarkets?: PredictionMarket[];
+  predictionPools?: Record<string, Record<string, PredictionPoolOption>>;
 };
 
 const COMP_LABELS: Record<string, string> = {
@@ -18,17 +32,49 @@ const COMP_LABELS: Record<string, string> = {
   f: "Final",
 };
 
-export function DevPanel({ userId, balance, unresolvedMatches, allProfiles = [] }: Props) {
+export function DevPanel({
+  userId,
+  balance,
+  unresolvedMatches,
+  allProfiles = [],
+  eventKeys = [],
+  eventNames = {},
+  predictionMarkets = [],
+  predictionPools = {},
+}: Props) {
   const router = useRouter();
 
   return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      <GrantBucksCard userId={userId} balance={balance} router={router} />
-      <CreateEventCard router={router} />
-      <CreateMatchCard router={router} />
-      <ResolveMatchCard matches={unresolvedMatches} router={router} />
-      <TeamNumberCard profiles={allProfiles} router={router} />
-      <ResetCard router={router} />
+    <div className="space-y-6">
+      {/* Core */}
+      <div>
+        <h2 className="text-[14px] font-medium text-[#7d8590] mb-3">Core</h2>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <GrantBucksCard userId={userId} balance={balance} router={router} />
+          <CreateEventCard router={router} />
+          <CreateMatchCard router={router} />
+          <ResolveMatchCard matches={unresolvedMatches} router={router} />
+        </div>
+      </div>
+
+      {/* Prediction Markets */}
+      <div>
+        <h2 className="text-[14px] font-medium text-[#7d8590] mb-3">Prediction Markets (Rankings & Playoffs)</h2>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <CreateRankingsCard eventKeys={eventKeys} eventNames={eventNames} router={router} />
+          <CreatePlayoffsCard eventKeys={eventKeys} eventNames={eventNames} router={router} />
+          <ResolvePredictionCard markets={predictionMarkets} pools={predictionPools} router={router} />
+        </div>
+      </div>
+
+      {/* Admin */}
+      <div>
+        <h2 className="text-[14px] font-medium text-[#7d8590] mb-3">Admin</h2>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <TeamNumberCard profiles={allProfiles} router={router} />
+          <ResetCard router={router} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -420,6 +466,270 @@ function TeamNumberCard({ profiles, router }: { profiles: Profile[]; router: Ret
       />
       <button onClick={handleUpdate} disabled={loading} className="w-full rounded-lg bg-[#388bfd] py-2 text-[13px] font-semibold text-white hover:bg-[#2563eb] disabled:opacity-50 transition-colors">
         {loading ? "Saving..." : "Set Team Number"}
+      </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function CreateRankingsCard({
+  eventKeys,
+  eventNames,
+  router,
+}: {
+  eventKeys: string[];
+  eventNames: Record<string, string>;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [selectedEvent, setSelectedEvent] = useState(eventKeys[0] ?? "");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const ref = useRef(false);
+
+  async function handleCreate() {
+    if (ref.current || !selectedEvent) return;
+    ref.current = true;
+    setLoading(true);
+    setMsg(null);
+
+    const fd = new FormData();
+    fd.set("eventKey", selectedEvent);
+    const res = await createTestRankingsAndAlliances(fd);
+
+    setLoading(false);
+    ref.current = false;
+
+    if (res.error) {
+      setMsg(`Error: ${res.error}`);
+    } else {
+      setMsg(`Created ${res.rankingCount} rankings + ${res.allianceCount} alliances → ranking & event winner markets!`);
+      router.refresh();
+    }
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161b22] p-5 space-y-3">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#e6edf3]">Create Rankings & Alliances</h3>
+        <p className="text-[11px] text-[#484f58]">
+          Generates fake rankings + 8 playoff alliances → creates ranking markets (#1-#8) and event winner market
+        </p>
+      </div>
+      <select
+        value={selectedEvent}
+        onChange={(e) => setSelectedEvent(e.target.value)}
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-2 text-[12px] text-[#e6edf3]"
+      >
+        {eventKeys.length === 0 && <option value="">No events — create one first</option>}
+        {eventKeys.map((ek) => (
+          <option key={ek} value={ek}>
+            {eventNames[ek] ?? ek}
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={handleCreate}
+        disabled={loading || !selectedEvent}
+        className="w-full rounded-lg bg-[#a855f7] py-2 text-[13px] font-semibold text-white hover:bg-[#9333ea] disabled:opacity-50 transition-colors"
+      >
+        {loading ? "Creating..." : "Generate Rankings & Alliances"}
+      </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function CreatePlayoffsCard({
+  eventKeys,
+  eventNames,
+  router,
+}: {
+  eventKeys: string[];
+  eventNames: Record<string, string>;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [selectedEvent, setSelectedEvent] = useState(eventKeys[0] ?? "");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const ref = useRef(false);
+
+  async function handleCreate() {
+    if (ref.current || !selectedEvent) return;
+    ref.current = true;
+    setLoading(true);
+    setMsg(null);
+
+    const fd = new FormData();
+    fd.set("eventKey", selectedEvent);
+    const res = await createTestPlayoffMatches(fd);
+
+    setLoading(false);
+    ref.current = false;
+
+    if (res.error) {
+      setMsg(`Error: ${res.error}`);
+    } else {
+      setMsg(`Created ${res.matchCount} playoff matches (${res.allianceCount} alliances)`);
+      router.refresh();
+    }
+  }
+
+  return (
+    <div className="rounded-xl bg-[#161b22] p-5 space-y-3">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#e6edf3]">Create Playoff Matches</h3>
+        <p className="text-[11px] text-[#484f58]">
+          Generates semifinal + final matches with random alliance matchups. Use after creating rankings.
+        </p>
+      </div>
+      <select
+        value={selectedEvent}
+        onChange={(e) => setSelectedEvent(e.target.value)}
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-2 text-[12px] text-[#e6edf3]"
+      >
+        {eventKeys.length === 0 && <option value="">No events — create one first</option>}
+        {eventKeys.map((ek) => (
+          <option key={ek} value={ek}>
+            {eventNames[ek] ?? ek}
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={handleCreate}
+        disabled={loading || !selectedEvent}
+        className="w-full rounded-lg bg-[#f59e0b] py-2 text-[13px] font-semibold text-black hover:bg-[#d97706] disabled:opacity-50 transition-colors"
+      >
+        {loading ? "Creating..." : "Generate Playoff Bracket"}
+      </button>
+      {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
+    </div>
+  );
+}
+
+function ResolvePredictionCard({
+  markets,
+  pools,
+  router,
+}: {
+  markets: PredictionMarket[];
+  pools: Record<string, Record<string, PredictionPoolOption>>;
+  router: ReturnType<typeof useRouter>;
+}) {
+  // Only show open markets that can be manually resolved (event_winner, ranking, custom)
+  const resolvable = markets.filter(
+    (m) =>
+      m.status === "open" &&
+      (m.type === "event_winner" ||
+        m.type === "ranking_top1" ||
+        m.type === "ranking_top8" ||
+        m.type === "ranking_position" ||
+        m.type === "custom")
+  );
+
+  const [selectedMarket, setSelectedMarket] = useState(resolvable[0]?.id ?? "");
+  const [selectedOption, setSelectedOption] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const ref = useRef(false);
+
+  const market = resolvable.find((m) => m.id === selectedMarket);
+
+  function handleMarketChange(id: string) {
+    setSelectedMarket(id);
+    setSelectedOption("");
+    setMsg(null);
+  }
+
+  async function handleResolve() {
+    if (ref.current || !selectedMarket || !selectedOption) return;
+    ref.current = true;
+    setLoading(true);
+    setMsg(null);
+
+    const fd = new FormData();
+    fd.set("marketId", selectedMarket);
+    fd.set("correctOption", selectedOption);
+    const res = await resolveTestPredictionMarket(fd);
+
+    setLoading(false);
+    ref.current = false;
+
+    if (res.error) {
+      setMsg(`Error: ${res.error}`);
+    } else {
+      setMsg(`Resolved! ${res.resolved} bets paid out.`);
+      router.refresh();
+    }
+  }
+
+  const TYPE_LABELS: Record<string, string> = {
+    event_winner: "Event Winner",
+    ranking_top1: "Rank #1",
+    ranking_position: "Rank",
+    ranking_top8: "Top 8",
+    custom: "Custom",
+  };
+
+  return (
+    <div className="rounded-xl bg-[#161b22] p-5 space-y-3">
+      <div>
+        <h3 className="text-[14px] font-semibold text-[#e6edf3]">Resolve Prediction Market</h3>
+        <p className="text-[11px] text-[#484f58]">Pick the winning option to resolve and pay out</p>
+      </div>
+      <select
+        value={selectedMarket}
+        onChange={(e) => handleMarketChange(e.target.value)}
+        className="w-full h-8 rounded-lg bg-[#0d1117] border border-[#21262d] px-2 text-[12px] text-[#e6edf3]"
+      >
+        {resolvable.length === 0 && <option value="">No open prediction markets</option>}
+        {resolvable.map((m) => {
+          const typeLabel = TYPE_LABELS[m.type] ?? m.type;
+          const poolTotal = Object.values(pools[m.id] ?? {}).reduce((s, p) => s + p.pool, 0);
+          return (
+            <option key={m.id} value={m.id}>
+              [{typeLabel}] {m.title} {poolTotal > 0 ? `($${poolTotal})` : "(no bets)"}
+            </option>
+          );
+        })}
+      </select>
+
+      {market && (
+        <>
+          <div className="text-[11px] text-[#484f58]">
+            {market.options.length} options · Pick the winner:
+          </div>
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {market.options.map((opt) => {
+              const poolInfo = pools[market.id]?.[opt.key];
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setSelectedOption(opt.key)}
+                  className={`w-full text-left rounded-lg px-3 py-2 text-[12px] transition-colors ${
+                    selectedOption === opt.key
+                      ? "bg-[#22c55e]/15 border border-[#22c55e]/50 text-[#22c55e]"
+                      : "bg-[#0d1117] border border-[#21262d] text-[#e6edf3] hover:border-[#30363d]"
+                  }`}
+                >
+                  <span className="font-medium">{opt.label}</span>
+                  {poolInfo && poolInfo.bettors > 0 && (
+                    <span className="ml-2 text-[10px] text-[#484f58]">
+                      ${poolInfo.pool} · {poolInfo.bettors} bet{poolInfo.bettors !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={handleResolve}
+        disabled={loading || !selectedMarket || !selectedOption}
+        className="w-full rounded-lg bg-[#22c55e] py-2 text-[13px] font-semibold text-white hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+      >
+        {loading ? "Resolving..." : "Resolve & Payout"}
       </button>
       {msg && <p className="text-[12px] text-[#7d8590]">{msg}</p>}
     </div>

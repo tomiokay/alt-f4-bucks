@@ -6,7 +6,8 @@ import {
   getActiveEventKeys,
   getCachedMatches,
 } from "@/db/bets";
-import type { MatchCache } from "@/lib/types";
+import { getAllOpenPredictionMarkets, getAllPredictionPoolSummaries } from "@/db/predictions";
+import type { MatchCache, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
 export default async function DevPage() {
   const profile = await getCurrentProfile();
@@ -14,17 +15,33 @@ export default async function DevPage() {
     redirect("/");
   }
 
-  const [balance, eventKeys, allProfiles] = await Promise.all([
+  const [balance, eventKeys, allProfiles, predMarkets, predPoolsMap] = await Promise.all([
     getUserBalance(profile.id),
     getActiveEventKeys(),
     getAllProfiles(),
+    getAllOpenPredictionMarkets(),
+    getAllPredictionPoolSummaries(),
   ]);
 
   let unresolvedMatches: MatchCache[] = [];
+  const eventNames: Record<string, string> = {};
   if (eventKeys.length > 0) {
     const arrays = await Promise.all(eventKeys.map((ek) => getCachedMatches(ek)));
     const all = arrays.flat();
     unresolvedMatches = all.filter((m) => !m.is_complete).slice(0, 200);
+    for (const m of all) {
+      if (!eventNames[m.event_key]) eventNames[m.event_key] = m.event_name;
+    }
+  }
+
+  // Convert prediction pools map
+  const predPools: Record<string, Record<string, PredictionPoolOption>> = {};
+  for (const [mId, optMap] of predPoolsMap) {
+    const opts: Record<string, PredictionPoolOption> = {};
+    for (const [optKey, optVal] of optMap) {
+      opts[optKey] = optVal;
+    }
+    predPools[mId] = opts;
   }
 
   return (
@@ -40,6 +57,10 @@ export default async function DevPage() {
         balance={balance}
         unresolvedMatches={unresolvedMatches}
         allProfiles={allProfiles}
+        eventKeys={eventKeys}
+        eventNames={eventNames}
+        predictionMarkets={predMarkets}
+        predictionPools={predPools}
       />
     </div>
   );

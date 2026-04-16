@@ -108,6 +108,18 @@ export async function getAllOpenPredictionMarkets(): Promise<PredictionMarket[]>
   return (data ?? []) as PredictionMarket[];
 }
 
+export async function getRecentlyResolvedPredictionMarkets(limit = 20): Promise<PredictionMarket[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prediction_markets")
+    .select("*")
+    .eq("status", "resolved")
+    .order("resolved_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []) as PredictionMarket[];
+}
+
 export async function getAllPredictionPoolSummaries(): Promise<Map<string, Map<string, PredictionPoolOption>>> {
   const supabase = await createClient();
   const { data } = await supabase

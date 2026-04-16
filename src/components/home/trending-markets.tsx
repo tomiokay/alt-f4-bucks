@@ -21,6 +21,7 @@ type Props = {
   balance: number;
   predictionMarkets: PredictionMarket[];
   predictionPools: Record<string, Record<string, PredictionPoolOption>>;
+  resolvedPredictionMarkets?: PredictionMarket[];
 };
 
 type TabKey = "all" | "matches" | "events" | "rankings" | "custom";
@@ -33,6 +34,7 @@ export function TrendingMarkets({
   balance,
   predictionMarkets,
   predictionPools,
+  resolvedPredictionMarkets = [],
 }: Props) {
   const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<SortKey>("activity");
@@ -287,19 +289,54 @@ export function TrendingMarkets({
         </div>
       )}
 
-      {/* Recently resolved */}
-      {completed.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-[16px] font-semibold text-[#e6edf3] mb-3">
-            Recently resolved
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {completed.slice(0, 6).map((item) => (
-              <MarketCard key={item.match.match_key} item={item} />
-            ))}
+      {/* Recently resolved — filtered by tab */}
+      {(() => {
+        const resolvedEventWinners = resolvedPredictionMarkets.filter((m) => m.type === "event_winner");
+        const resolvedRankings = resolvedPredictionMarkets.filter(
+          (m) => m.type === "ranking_top1" || m.type === "ranking_top8" || m.type === "ranking_position"
+        );
+        const resolvedCustom = resolvedPredictionMarkets.filter((m) => m.is_custom);
+
+        if (tab === "matches" || tab === "all") {
+          if (completed.length === 0) return null;
+          return (
+            <div className="mt-8">
+              <h2 className="text-[16px] font-semibold text-[#e6edf3] mb-3">
+                Recently resolved
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {completed.slice(0, 6).map((item) => (
+                  <MarketCard key={item.match.match_key} item={item} />
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        const resolvedList =
+          tab === "events" ? resolvedEventWinners :
+          tab === "rankings" ? resolvedRankings :
+          tab === "custom" ? resolvedCustom : [];
+
+        if (resolvedList.length === 0) return null;
+        return (
+          <div className="mt-8">
+            <h2 className="text-[16px] font-semibold text-[#e6edf3] mb-3">
+              Recently resolved
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {resolvedList.slice(0, 6).map((m) => (
+                <PredictionMarketCard
+                  key={m.id}
+                  market={m}
+                  pools={predictionPools[m.id] ?? {}}
+                  balance={balance}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <BetSlip
         match={slipMatch}

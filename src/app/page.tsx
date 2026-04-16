@@ -9,6 +9,7 @@ import {
 import {
   getAllOpenPredictionMarkets,
   getAllPredictionPoolSummaries,
+  getRecentlyResolvedPredictionMarkets,
 } from "@/db/predictions";
 import { calculateOdds } from "@/lib/odds";
 import { FeaturedCarousel } from "@/components/home/featured-carousel";
@@ -50,12 +51,13 @@ function HomeSkeleton() {
 async function HomeContent() {
   const profile = await getCurrentProfile();
 
-  const [balance, allMatches, poolMap, allPredMarkets, allPredPoolsMap] = await Promise.all([
+  const [balance, allMatches, poolMap, allPredMarkets, allPredPoolsMap, resolvedPredMarkets] = await Promise.all([
     profile ? getUserBalance(profile.id) : Promise.resolve(0),
     getAllCachedMatches(),
     getAllPoolSummaries(),
     getAllOpenPredictionMarkets(),
     getAllPredictionPoolSummaries(),
+    getRecentlyResolvedPredictionMarkets(12),
   ]);
 
   const pools: Record<string, PoolSummary> = {};
@@ -156,6 +158,7 @@ async function HomeContent() {
           balance={balance}
           predictionMarkets={allPredMarkets}
           predictionPools={allPredPools}
+          resolvedPredictionMarkets={resolvedPredMarkets}
         />
         <div className="lg:hidden space-y-5">
           <BreakingNews items={breaking} allCompleted={completed} />

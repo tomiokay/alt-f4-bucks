@@ -67,13 +67,15 @@ export default async function EventsPage() {
     return a.name.localeCompare(b.name);
   });
 
-  // Unsynced TBA events in next 3 days
+  // Unsynced TBA events: next 3 days OR favorited
   const syncedKeys = new Set(eventStats.keys());
   const nowDate = new Date();
   const threeDaysFromNow = new Date(nowDate.getTime() + 3 * 24 * 60 * 60 * 1000);
   const upcomingTbaEvents = tbaEvents
     .filter((e) => {
       if (syncedKeys.has(e.key)) return false;
+      // Always show favorited events
+      if (favoriteSet.has(e.key)) return true;
       const start = new Date(e.start_date);
       const end = new Date(e.end_date + "T23:59:59");
       return (start <= threeDaysFromNow && end >= nowDate);

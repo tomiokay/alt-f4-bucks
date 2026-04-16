@@ -137,6 +137,11 @@ async function BettingContent({ userId, query, q }: { userId: string; query: str
         <h2 className="text-[16px] font-semibold text-[#e6edf3]">
           {query ? `Results for "${q}"` : "All markets"}
         </h2>
+        {query && /^\d+$/.test(query) && parseInt(query) <= 200 && (
+          <span className="text-[11px] text-[#f59e0b]">
+            Tip: Looking for team {query}? Search &quot;team {query}&quot; instead
+          </span>
+        )}
         {query && (
           <a href="/betting" className="text-[12px] text-[#388bfd] hover:text-[#58a6ff]">
             Clear search

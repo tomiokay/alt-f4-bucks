@@ -156,8 +156,7 @@ export async function GET(request: NextRequest) {
   let predResolved = 0;
   try {
     const { resolveScoreMarkets } = await import("@/app/actions/predictions");
-    // Only resolve for tracked events (not all 200+)
-    for (const eventKey of trackedKeys) {
+    for (const eventKey of allKeys) {
       predResolved += await resolveScoreMarkets(eventKey);
     }
   } catch {

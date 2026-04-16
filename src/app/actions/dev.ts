@@ -201,6 +201,32 @@ export async function grantBucks(formData: FormData) {
   return { success: true };
 }
 
+export async function resetUser(userId: string) {
+  await requireAdmin();
+  const service = await createServiceClient();
+
+  // Delete user's bets, prediction bets, comments, notifications
+  await service.from("pool_bets").delete().eq("user_id", userId);
+  await service.from("prediction_bets").delete().eq("user_id", userId);
+  await service.from("comments").delete().eq("user_id", userId);
+  await service.from("notifications").delete().eq("user_id", userId);
+  await service.from("transactions").delete().eq("to_user_id", userId);
+
+  // Re-grant 10,000 AF4
+  await service.from("transactions").insert({
+    type: "award" as const,
+    amount: 10000,
+    to_user_id: userId,
+    reason: "Account reset — 10,000 AF4",
+    category: "bonus",
+  });
+
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
+  return { success: true };
+}
+
 const RESET_PASSWORD = process.env.RESET_PASSWORD || "altf4reset2026";
 
 export async function resetEverything(formData: FormData) {

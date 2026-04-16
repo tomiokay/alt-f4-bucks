@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { setBanStatus, adminRenameUser } from "@/app/actions/settings";
+import { resetUser } from "@/app/actions/dev";
 import { cn } from "@/lib/utils";
-import { Pencil, X, Check } from "lucide-react";
+import { Pencil, X, Check, RotateCcw } from "lucide-react";
 import type { Profile } from "@/lib/types";
 
 type Props = {
@@ -184,11 +185,27 @@ export function UserManagement({ members, currentUserId }: Props) {
                 </div>
               </div>
 
+              <div className="flex items-center gap-1.5 shrink-0">
+                {!isSelf && (
+                  <button
+                    onClick={() => {
+                      if (!confirm(`Reset ${names[member.id] || member.display_name}'s account? This deletes all their bets and resets to $10,000.`)) return;
+                      startTransition(async () => {
+                        await resetUser(member.id);
+                      });
+                    }}
+                    disabled={isLoading}
+                    className="h-7 px-2 rounded-md text-[11px] font-semibold bg-[#f59e0b]/10 text-[#f59e0b] hover:bg-[#f59e0b]/20 border border-[#f59e0b]/30 transition-colors disabled:opacity-40"
+                    title="Reset account"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </button>
+                )}
               <button
                 onClick={() => toggleBan(member)}
                 disabled={isLoading || isSelf}
                 className={cn(
-                  "shrink-0 h-7 px-3 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                  "h-7 px-3 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
                   isBanned
                     ? "bg-[#22c55e]/10 text-[#22c55e] hover:bg-[#22c55e]/20 border border-[#22c55e]/30"
                     : "bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 border border-[#ef4444]/30"
@@ -196,6 +213,7 @@ export function UserManagement({ members, currentUserId }: Props) {
               >
                 {isLoading ? "..." : isBanned ? "Unban" : "Ban"}
               </button>
+              </div>
             </div>
           );
         })}

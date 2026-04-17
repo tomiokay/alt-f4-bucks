@@ -7,6 +7,7 @@ import { TeamNumberForm } from "@/components/team-number-form";
 import { getCurrentProfile, getAllProfiles } from "@/db/profiles";
 import { getAllStoreItems } from "@/db/store";
 import { getOpenCustomMarkets } from "@/app/actions/custom-markets";
+import { createServiceClient } from "@/lib/supabase/server";
 import { UserManagement } from "@/components/user-management";
 import { CustomMarketsManager } from "@/components/custom-markets-manager";
 
@@ -23,6 +24,22 @@ export default async function ManagerPage() {
   ]);
 
   const members = allProfiles;
+
+  // Fetch emails from Supabase Auth (admin only)
+  const emails: Record<string, string> = {};
+  if (profile.role === "admin") {
+    try {
+      const service = await createServiceClient();
+      const { data: authUsers } = await service.auth.admin.listUsers();
+      if (authUsers?.users) {
+        for (const u of authUsers.users) {
+          if (u.email) emails[u.id] = u.email;
+        }
+      }
+    } catch {
+      // Non-critical
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -50,7 +67,7 @@ export default async function ManagerPage() {
         </TabsContent>
 
         <TabsContent value="users">
-          <UserManagement members={members} currentUserId={profile.id} />
+          <UserManagement members={members} currentUserId={profile.id} emails={emails} />
         </TabsContent>
 
         <TabsContent value="teams">

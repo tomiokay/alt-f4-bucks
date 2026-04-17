@@ -10,9 +10,10 @@ import type { Profile } from "@/lib/types";
 type Props = {
   members: Profile[];
   currentUserId: string;
+  emails?: Record<string, string>;
 };
 
-export function UserManagement({ members, currentUserId }: Props) {
+export function UserManagement({ members, currentUserId, emails = {} }: Props) {
   const [query, setQuery] = useState("");
   const [statuses, setStatuses] = useState<Record<string, boolean>>(
     Object.fromEntries(members.map((m) => [m.id, m.banned]))
@@ -197,9 +198,11 @@ export function UserManagement({ members, currentUserId }: Props) {
                     )}
                   </div>
                   )}
-                  {member.team_number && (
+                  {(member.team_number || emails[member.id]) && (
                     <span className="text-[11px] text-[#484f58]">
-                      Team {member.team_number}
+                      {member.team_number ? `Team ${member.team_number}` : ""}
+                      {member.team_number && emails[member.id] ? " · " : ""}
+                      {emails[member.id] ?? ""}
                     </span>
                   )}
                   {errors[member.id] && (

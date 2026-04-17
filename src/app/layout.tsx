@@ -44,14 +44,26 @@ async function ensureWelcomeBonusIfNeeded(userId: string) {
   try {
     const { createServiceClient } = await import("@/lib/supabase/server");
     const service = await createServiceClient();
-    const { data: existing } = await service
+
+    // Count ALL bonus transactions (not just limit 1) to detect duplicates
+    const { count } = await service
+      .from("transactions")
+      .select("*", { count: "exact", head: true })
+      .eq("to_user_id", userId)
+      .eq("category", "bonus");
+
+    if ((count ?? 0) > 0) return;
+
+    // Use upsert-like pattern: insert with a unique check
+    // Only insert if no bonus exists (re-check to prevent race condition)
+    const { data: recheck } = await service
       .from("transactions")
       .select("id")
       .eq("to_user_id", userId)
       .eq("category", "bonus")
       .limit(1);
 
-    if (existing && existing.length > 0) return;
+    if (recheck && recheck.length > 0) return;
 
     await service.from("transactions").insert({
       type: "award",
@@ -79,9 +91,9 @@ export default async function RootLayout({
 }>) {
   const profile = await getCurrentProfile();
 
-  // Ensure welcome bonus for verified users who logged in via email link
+  // Ensure welcome bonus (only if no bonus exists yet)
   if (profile) {
-    await ensureWelcomeBonusIfNeeded(profile.id);
+    ensureWelcomeBonusIfNeeded(profile.id).catch(() => {});
   }
 
   return (

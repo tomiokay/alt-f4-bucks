@@ -157,8 +157,12 @@ export async function resetPassword(formData: FormData) {
 
   if (!email) return { error: "Email is required" };
 
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://alt-f4-bucks.vercel.app`
+    : "http://localhost:3000";
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? "https://alt-f4-bucks.vercel.app" : "http://localhost:3000"}/settings`,
+    redirectTo: `${baseUrl}/auth/callback?next=/settings`,
   });
 
   if (error) return { error: error.message };

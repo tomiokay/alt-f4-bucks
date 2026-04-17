@@ -125,12 +125,13 @@ export function TrendingMarkets({
     const items: UnifiedItem[] = [];
 
     if (sort === "resolved") {
-      // Only show resolved markets with bets
+      // Only show resolved markets with actual bets
       for (const m of completed) {
         if (m.odds.totalPool > 0) items.push({ kind: "match", data: m });
       }
       for (const p of resolvedPredictionMarkets) {
-        items.push({ kind: "prediction", data: p });
+        const pStats = getPredStats(p.id);
+        if (pStats.pool > 0) items.push({ kind: "prediction", data: p });
       }
     } else {
       // Include upcoming matches + completed matches with bets

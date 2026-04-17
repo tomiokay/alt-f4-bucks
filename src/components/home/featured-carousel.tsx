@@ -451,6 +451,9 @@ function MatchSlide({
     scheduledMs !== null && Date.now() >= scheduledMs && !match.is_complete;
   const totalTraders = odds.redBettors + odds.blueBettors;
 
+  const cutoffTime = match.scheduled_time ? new Date(new Date(match.scheduled_time).getTime() - 5 * 60 * 1000) : null;
+  const isBettingClosed = match.is_complete || (cutoffTime && cutoffTime < new Date());
+
   const formattedTime = match.scheduled_time
     ? new Date(match.scheduled_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : null;
@@ -498,6 +501,11 @@ function MatchSlide({
           </div>
 
           {/* Bet buttons */}
+          {isBettingClosed ? (
+            <div className="rounded-lg bg-[#21262d] py-2.5 text-center text-[13px] text-[#484f58] font-medium mb-4">
+              {match.is_complete ? "Market resolved" : "Betting closed — waiting for result"}
+            </div>
+          ) : (
           <div className="flex gap-2 mb-4">
             <motion.button
               onClick={() => onBet("red")}
@@ -516,6 +524,7 @@ function MatchSlide({
               Blue {odds.bluePct}¢
             </motion.button>
           </div>
+          )}
 
           {/* Alliance details */}
           <div className="space-y-2 mb-3">

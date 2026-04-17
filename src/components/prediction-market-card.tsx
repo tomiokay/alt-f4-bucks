@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { placePredictionBet } from "@/app/actions/predictions";
 import { isConfirmEnabled } from "@/lib/use-confirm-bets";
@@ -91,9 +92,12 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
             {typeConfig.icon}
           </div>
           <div className="min-w-0">
-            <h3 className="text-[14px] font-medium text-[#e6edf3] leading-snug truncate">
+            <Link
+              href={market.match_key ? `/market/${encodeURIComponent(market.match_key)}` : `/events/${market.event_key}`}
+              className="text-[14px] font-medium text-[#e6edf3] leading-snug truncate hover:text-[#58a6ff] transition-colors block"
+            >
               {market.title}
-            </h3>
+            </Link>
             {market.description && (
               <p className="text-[11px] text-[#484f58] truncate">{market.description}</p>
             )}

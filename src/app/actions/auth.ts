@@ -151,6 +151,20 @@ export async function signup(formData: FormData) {
   redirect("/dashboard");
 }
 
+export async function resetPassword(formData: FormData) {
+  const supabase = await createClient();
+  const email = (formData.get("email") as string)?.trim();
+
+  if (!email) return { error: "Email is required" };
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? "https://alt-f4-bucks.vercel.app" : "http://localhost:3000"}/settings`,
+  });
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { login, signup } from "@/app/actions/auth";
+import { login, signup, resetPassword } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { HowItWorksButton } from "@/components/how-it-works";
 import { Eye, EyeOff } from "lucide-react";
@@ -38,6 +38,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [verificationSent, setVerificationSent] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   async function handleLogin(formData: FormData) {
     setError(null);
@@ -126,6 +128,60 @@ export default function LoginPage() {
                   Back to login
                 </button>
               </div>
+            ) : showReset ? (
+              resetSent ? (
+                <div className="text-center py-6 space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-[#22c55e]/10 flex items-center justify-center mx-auto">
+                    <span className="text-2xl">✉️</span>
+                  </div>
+                  <h3 className="text-[15px] font-semibold text-[#e6edf3]">Check your email</h3>
+                  <p className="text-[13px] text-[#7d8590]">
+                    We sent a password reset link to your email.
+                  </p>
+                  <button
+                    onClick={() => { setShowReset(false); setResetSent(false); }}
+                    className="text-[13px] text-[#388bfd] hover:text-[#58a6ff]"
+                  >
+                    Back to login
+                  </button>
+                </div>
+              ) : (
+                <form action={async (fd) => {
+                  setError(null);
+                  setLoading(true);
+                  const res = await resetPassword(fd);
+                  setLoading(false);
+                  if (res.error) setError(res.error);
+                  else setResetSent(true);
+                }} className="space-y-3">
+                  <p className="text-[13px] text-[#7d8590]">Enter your email and we'll send a reset link.</p>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] text-[#7d8590]">Email</label>
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      placeholder="you@example.com"
+                      className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
+                    />
+                  </div>
+                  {error && <p className="text-[12px] text-[#ef4444]">{error}</p>}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-10 rounded-lg bg-[#22c55e] text-white text-[14px] font-semibold hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                  >
+                    {loading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReset(false); setError(null); }}
+                    className="w-full text-[13px] text-[#7d8590] hover:text-[#e6edf3]"
+                  >
+                    Back to login
+                  </button>
+                </form>
+              )
             ) : tab === "login" ? (
               <form action={handleLogin} className="space-y-3">
                 <div className="space-y-1.5">
@@ -149,6 +205,13 @@ export default function LoginPage() {
                   className="w-full h-10 rounded-lg bg-[#22c55e] text-white text-[14px] font-semibold hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
                 >
                   {loading ? "Signing in..." : "Log In"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(true); setError(null); }}
+                  className="w-full text-[12px] text-[#484f58] hover:text-[#7d8590]"
+                >
+                  Forgot password?
                 </button>
               </form>
             ) : (

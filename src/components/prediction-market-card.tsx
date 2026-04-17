@@ -100,6 +100,13 @@ export function PredictionMarketCard({ market, pools, balance }: Props) {
           </div>
         </div>
 
+        {/* Info note for event winner */}
+        {market.type === "event_winner" && !isResolved && !isClosed && (
+          <p className="text-[10px] text-[#f59e0b] mb-2">
+            Resolves when playoffs are complete
+          </p>
+        )}
+
         {/* Status badges */}
         <div className="flex items-center gap-2 text-[10px]">
           {isResolved ? (

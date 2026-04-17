@@ -626,8 +626,13 @@ function PredictionSlide({
       ? "from-yellow-500 to-amber-500"
       : "from-blue-500 to-cyan-500";
 
-  // Show top options (max 6), rest collapsed
-  const topOptions = market.options.slice(0, 6);
+  // Sort options: ones with bets first (by pool size), then the rest
+  const sortedOptions = [...market.options].sort((a, b) => {
+    const aPool = pools[a.key]?.pool ?? 0;
+    const bPool = pools[b.key]?.pool ?? 0;
+    return bPool - aPool;
+  });
+  const topOptions = sortedOptions.slice(0, 6);
 
   return (
     <div className="relative">

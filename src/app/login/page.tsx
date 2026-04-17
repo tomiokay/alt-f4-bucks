@@ -40,6 +40,11 @@ export default function LoginPage() {
   const [verificationSent, setVerificationSent] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  // Persist form values on error
+  const [loginEmail, setLoginEmail] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupTeam, setSignupTeam] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
 
   async function handleLogin(formData: FormData) {
     setError(null);
@@ -190,6 +195,8 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     required
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="you@example.com"
                     className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
@@ -221,6 +228,8 @@ export default function LoginPage() {
                   <input
                     name="displayName"
                     required
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
                     placeholder="Your name"
                     className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
@@ -229,6 +238,8 @@ export default function LoginPage() {
                   <label className="text-[12px] text-[#7d8590]">Team number <span className="text-[#484f58]">(optional)</span></label>
                   <input
                     name="teamNumber"
+                    value={signupTeam}
+                    onChange={(e) => setSignupTeam(e.target.value)}
                     placeholder="e.g. 7558"
                     className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />
@@ -239,6 +250,8 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     required
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="you@example.com"
                     className="w-full h-10 rounded-lg bg-[#0d1117] border border-[#30363d] px-3 text-[14px] text-[#e6edf3] placeholder:text-[#484f58] focus:border-[#388bfd] focus:outline-none"
                   />

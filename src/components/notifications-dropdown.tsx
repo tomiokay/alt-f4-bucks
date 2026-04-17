@@ -59,9 +59,14 @@ function groupNotifications(notifications: Notification[]): GroupedNotification[
     const matchKey = (n.meta as Record<string, string>)?.match_key ?? "";
     const groupKey = `${matchKey}:${n.type}`;
 
-    // Parse amount from message like "your $100 bet"
-    const amountMatch = n.message.match(/\$(\d+)/);
-    const amount = amountMatch ? parseInt(amountMatch[1]) : 0;
+    // Parse payout from win messages like "Paid out $1,044" or bet amount from "your $1,000 bet"
+    const payoutMatch = n.message.match(/Paid out \$([\d,]+)/);
+    const betMatch = n.message.match(/\$([\d,]+) bet/);
+    const amount = payoutMatch
+      ? parseInt(payoutMatch[1].replace(/,/g, ""))
+      : betMatch
+      ? parseInt(betMatch[1].replace(/,/g, ""))
+      : 0;
 
     const existing = groups.get(groupKey);
     if (existing) {
@@ -154,11 +159,11 @@ export function NotificationsDropdown({ notifications, unreadCount }: Props) {
                   let message = g.message;
                   if (g.count > 1) {
                     if (g.type === "bet_won") {
-                      message = `You won ${g.count} bets totaling $${g.totalAmount} on ${g.matchKey}!`;
+                      message = `You won ${g.count} bets — paid out $${g.totalAmount.toLocaleString()} on ${g.matchKey}!`;
                     } else if (g.type === "bet_lost") {
-                      message = `You lost ${g.count} bets totaling $${g.totalAmount} on ${g.matchKey}.`;
+                      message = `You lost ${g.count} bets totaling $${g.totalAmount.toLocaleString()} on ${g.matchKey}.`;
                     } else if (g.type === "bet_refund") {
-                      message = `${g.count} bets totaling $${g.totalAmount} were refunded on ${g.matchKey}.`;
+                      message = `${g.count} bets totaling $${g.totalAmount.toLocaleString()} were refunded on ${g.matchKey}.`;
                     }
                   }
 

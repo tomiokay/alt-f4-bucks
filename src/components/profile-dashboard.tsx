@@ -317,14 +317,20 @@ export function ProfileDashboard({ profile, balance, bets, predictionBets = [], 
             </div>
           ) : (
             predictionBets.map((bet) => {
-              const isWon = bet.payout !== null && bet.payout > 0;
-              const isLost = bet.payout !== null && bet.payout === 0;
               const isPending = bet.payout === null;
+              const isWon = !isPending && (bet.payout ?? 0) > bet.amount;
+              const isLost = !isPending && (bet.payout ?? 0) <= bet.amount;
               const isScore = bet.predicted_red !== null;
+              const linkHref = bet.market_id
+                ? (isScore && bet.market_title === "Predict the Score")
+                  ? `/market/${encodeURIComponent(bet.market_id)}`
+                  : `/events/${bet.market_type === "custom" ? "custom" : ""}`
+                : "#";
 
               return (
-                <div
+                <Link
                   key={bet.id}
+                  href={`/market/${encodeURIComponent(bet.market_id)}`}
                   className="grid grid-cols-[1fr_80px_80px] gap-2 items-center px-4 py-3 border-b border-[#21262d] last:border-0 hover:bg-[#1c2128] transition-colors"
                 >
                   <div className="min-w-0">
@@ -351,7 +357,7 @@ export function ProfileDashboard({ profile, balance, bets, predictionBets = [], 
                   )}>
                     {isPending ? "—" : `$${(bet.payout ?? 0).toLocaleString()}`}
                   </span>
-                </div>
+                </Link>
               );
             })
           )}

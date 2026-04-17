@@ -122,7 +122,20 @@ export async function signup(formData: FormData) {
     return { error: error.message };
   }
 
-  // Grant welcome bonus and save team number
+  // If email confirmation is required, user won't be fully confirmed yet
+  if (data.user && !data.user.confirmed_at) {
+    // Save team number via service client since user isn't confirmed yet
+    if (parsed.data.teamNumber) {
+      const service = await createServiceClient();
+      await service
+        .from("profiles")
+        .update({ team_number: parsed.data.teamNumber })
+        .eq("id", data.user.id);
+    }
+    return { success: true, needsVerification: true };
+  }
+
+  // Grant welcome bonus and save team number (if no email confirmation required)
   if (data.user) {
     await ensureWelcomeBonus(data.user.id);
 

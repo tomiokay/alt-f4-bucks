@@ -37,6 +37,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"login" | "signup">("login");
+  const [verificationSent, setVerificationSent] = useState(false);
 
   async function handleLogin(formData: FormData) {
     setError(null);
@@ -63,6 +64,7 @@ export default function LoginPage() {
     const result = await signup(formData);
     setLoading(false);
     if (result?.error) setError(result.error);
+    else if (result?.needsVerification) setVerificationSent(true);
   }
 
   return (
@@ -108,7 +110,23 @@ export default function LoginPage() {
           </div>
 
           <div className="p-5">
-            {tab === "login" ? (
+            {verificationSent ? (
+              <div className="text-center py-6 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-[#22c55e]/10 flex items-center justify-center mx-auto">
+                  <span className="text-2xl">✉️</span>
+                </div>
+                <h3 className="text-[15px] font-semibold text-[#e6edf3]">Check your email</h3>
+                <p className="text-[13px] text-[#7d8590]">
+                  We sent a verification link to your email. Click it to activate your account.
+                </p>
+                <button
+                  onClick={() => { setVerificationSent(false); setTab("login"); }}
+                  className="text-[13px] text-[#388bfd] hover:text-[#58a6ff]"
+                >
+                  Back to login
+                </button>
+              </div>
+            ) : tab === "login" ? (
               <form action={handleLogin} className="space-y-3">
                 <div className="space-y-1.5">
                   <label className="text-[12px] text-[#7d8590]">Email</label>

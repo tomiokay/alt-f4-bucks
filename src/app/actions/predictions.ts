@@ -221,13 +221,29 @@ export async function ensureEventMarkets(
   }
 
   // 3. Per-rank prediction markets (Ranks 1-8)
-  // Create as soon as we have qual matches, regardless of completion status
+  // Create as soon as we have matches — use rankings if available, otherwise extract teams from matches
   const allQualMatches = matches.filter((m) => m.comp_level === "qm");
-  if (rankings.length > 0 && allQualMatches.length > 0) {
-    const allTeams = rankings.map((r) => ({
+  let allTeams: { key: string; label: string }[] = [];
+
+  if (rankings.length > 0) {
+    allTeams = rankings.map((r) => ({
       key: r.team_key,
       label: `Team ${r.team_key.replace("frc", "")}`,
     }));
+  } else if (matches.length > 0) {
+    // Extract unique teams from match data
+    const teamSet = new Set<string>();
+    for (const m of matches) {
+      for (const t of m.red_teams) teamSet.add(t);
+      for (const t of m.blue_teams) teamSet.add(t);
+    }
+    allTeams = [...teamSet].sort().map((t) => ({
+      key: t.startsWith("frc") ? t : `frc${t}`,
+      label: `Team ${t.replace("frc", "")}`,
+    }));
+  }
+
+  if (allTeams.length > 0) {
 
     for (let rank = 1; rank <= 8; rank++) {
       // Use ranking_position type with rank stored in `line`

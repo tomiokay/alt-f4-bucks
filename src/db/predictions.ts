@@ -134,13 +134,42 @@ export async function getAllPredictionPoolSummaries(): Promise<Map<string, Map<s
   return map;
 }
 
-export async function getUserPredictionBets(userId: string): Promise<PredictionBet[]> {
+export type PredictionBetWithMarket = PredictionBet & {
+  market_title: string;
+  market_type: string;
+  option_label: string;
+};
+
+export async function getUserPredictionBets(userId: string): Promise<PredictionBetWithMarket[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data: bets } = await supabase
     .from("prediction_bets")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  return (data ?? []) as PredictionBet[];
+  if (!bets || bets.length === 0) return [];
+
+  // Fetch market info for all bets
+  const marketIds = [...new Set((bets as PredictionBet[]).map((b) => b.market_id))];
+  const { data: markets } = await supabase
+    .from("prediction_markets")
+    .select("id, title, type, options")
+    .in("id", marketIds);
+
+  const marketMap = new Map<string, { title: string; type: string; options: { key: string; label: string }[] }>();
+  for (const m of (markets ?? []) as { id: string; title: string; type: string; options: { key: string; label: string }[] }[]) {
+    marketMap.set(m.id, { title: m.title, type: m.type, options: m.options });
+  }
+
+  return (bets as PredictionBet[]).map((bet) => {
+    const market = marketMap.get(bet.market_id);
+    const optionLabel = market?.options.find((o) => o.key === bet.option_key)?.label ?? bet.option_key;
+    return {
+      ...bet,
+      market_title: market?.title ?? "Unknown Market",
+      market_type: market?.type ?? "custom",
+      option_label: optionLabel,
+    };
+  });
 }

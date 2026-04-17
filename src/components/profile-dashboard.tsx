@@ -10,13 +10,14 @@ import {
   Tooltip,
   YAxis,
 } from "recharts";
-import type { Profile, PoolBetWithProfile, PredictionBet } from "@/lib/types";
+import type { Profile, PoolBetWithProfile } from "@/lib/types";
+import type { PredictionBetWithMarket } from "@/db/predictions";
 
 type Props = {
   profile: Profile;
   balance: number;
   bets: PoolBetWithProfile[];
-  predictionBets?: PredictionBet[];
+  predictionBets?: PredictionBetWithMarket[];
   totalPnL: number;
   biggestWin: number;
   totalBets: number;
@@ -330,9 +331,12 @@ export function ProfileDashboard({ profile, balance, bets, predictionBets = [], 
                     <span className="text-[13px] text-[#e6edf3] block truncate">
                       {isScore
                         ? `Score: ${bet.predicted_red}-${bet.predicted_blue}`
-                        : bet.option_key}
+                        : bet.option_label}
                     </span>
-                    <span className="text-[11px] text-[#484f58]">
+                    <span className="text-[11px] text-[#484f58] block truncate">
+                      {bet.market_title}
+                    </span>
+                    <span className="text-[10px] text-[#484f58]">
                       {isPending ? "Pending" : isWon ? "Won" : "Lost"}
                       {" · "}
                       {new Date(bet.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

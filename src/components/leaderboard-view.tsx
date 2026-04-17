@@ -122,15 +122,20 @@ export function LeaderboardView({ entries, biggestWins = [] }: Props) {
                       </span>
                     </div>
 
-                    <span className={cn(
-                      "text-right text-[14px] tabular-nums font-mono font-medium",
-                      entry.balance > 10000 ? "text-[#22c55e]" : entry.balance < 10000 ? "text-[#ef4444]" : "text-[#e6edf3]"
-                    )}>
-                      ${entry.balance.toLocaleString()}
-                    </span>
+                    {(() => {
+                      const total = entry.portfolio_value ?? entry.balance;
+                      return (
+                        <span className={cn(
+                          "text-right text-[14px] tabular-nums font-mono font-medium",
+                          total > 10000 ? "text-[#22c55e]" : total < 10000 ? "text-[#ef4444]" : "text-[#e6edf3]"
+                        )}>
+                          ${total.toLocaleString()}
+                        </span>
+                      );
+                    })()}
 
                     {(() => {
-                      const pnl = entry.betting_pnl ?? (entry.balance - 10000);
+                      const pnl = entry.betting_pnl ?? ((entry.portfolio_value ?? entry.balance) - 10000);
                       return (
                         <span className={cn(
                           "text-right text-[14px] tabular-nums font-mono hidden sm:block",

@@ -16,9 +16,11 @@ export default async function DashboardPage() {
     getUserPredictionBets(profile.id),
   ]);
 
-  // P&L = net profit/loss from betting only (excludes admin awards/deductions)
+  // P&L = net profit/loss from all settled bets (pool bets + prediction bets)
   const settledBets = bets.filter((b) => b.payout !== null);
-  const totalPnL = settledBets.reduce((sum, b) => sum + (b.payout! - b.amount), 0);
+  const settledPredBets = predBets.filter((b) => b.payout !== null);
+  const totalPnL = settledBets.reduce((sum, b) => sum + (b.payout! - b.amount), 0)
+    + settledPredBets.reduce((sum, b) => sum + ((b.payout ?? 0) - b.amount), 0);
   const biggestWin = settledBets
     .filter((b) => b.payout! > b.amount)
     .reduce((max, b) => Math.max(max, b.payout! - b.amount), 0);

@@ -6,7 +6,7 @@ export async function getLeaderboard(limit = 25): Promise<LeaderboardEntry[]> {
   const { data } = await supabase
     .from("leaderboard_view")
     .select("*")
-    .order("balance", { ascending: false })
+    .order("portfolio_value", { ascending: false })
     .limit(limit);
 
   return (data ?? []) as LeaderboardEntry[];

@@ -33,7 +33,7 @@ export async function createCustomMarket(formData: FormData) {
     label,
   }));
 
-  const { error } = await service.from("prediction_markets").insert({
+  let { error } = await service.from("prediction_markets").insert({
     event_key: eventKey,
     match_key: null,
     type: "custom",
@@ -44,6 +44,21 @@ export async function createCustomMarket(formData: FormData) {
     is_custom: true,
     featured: true,
   });
+
+  // Retry without featured if column doesn't exist
+  if (error && error.code === "PGRST204") {
+    const retry = await service.from("prediction_markets").insert({
+      event_key: eventKey,
+      match_key: null,
+      type: "custom",
+      title,
+      description,
+      options,
+      status: "open",
+      is_custom: true,
+    });
+    error = retry.error;
+  }
 
   if (error) return { error: error.message };
 

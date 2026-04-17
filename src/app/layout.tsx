@@ -40,12 +40,49 @@ async function NavWithData({ profile }: { profile: import("@/lib/types").Profile
   );
 }
 
+async function ensureWelcomeBonusIfNeeded(userId: string) {
+  try {
+    const { createServiceClient } = await import("@/lib/supabase/server");
+    const service = await createServiceClient();
+    const { data: existing } = await service
+      .from("transactions")
+      .select("id")
+      .eq("to_user_id", userId)
+      .eq("category", "bonus")
+      .limit(1);
+
+    if (existing && existing.length > 0) return;
+
+    await service.from("transactions").insert({
+      type: "award",
+      amount: 10000,
+      to_user_id: userId,
+      reason: "Welcome bonus — 10,000 AF4 to get started",
+      category: "bonus",
+    });
+
+    await service.from("notifications").insert({
+      user_id: userId,
+      type: "welcome",
+      message: "Welcome to Alt-F4 Bucks! You've been given $10,000 AF4 to start trading.",
+      meta: {},
+    });
+  } catch {
+    // Non-critical
+  }
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const profile = await getCurrentProfile();
+
+  // Ensure welcome bonus for verified users who logged in via email link
+  if (profile) {
+    await ensureWelcomeBonusIfNeeded(profile.id);
+  }
 
   return (
     <html lang="en">

@@ -79,6 +79,31 @@ export async function placeScorePrediction(formData: FormData) {
     return { error: parsed.error.issues[0].message };
   }
 
+  // Check 5-minute cutoff for score predictions
+  const { data: marketData } = await supabase
+    .from("prediction_markets")
+    .select("match_key")
+    .eq("id", parsed.data.marketId)
+    .single();
+
+  if (marketData?.match_key) {
+    const { data: match } = await supabase
+      .from("match_cache")
+      .select("scheduled_time, is_complete")
+      .eq("match_key", marketData.match_key)
+      .single();
+
+    if (match?.is_complete) {
+      return { error: "This match has already been played." };
+    }
+    if (match?.scheduled_time) {
+      const cutoff = new Date(match.scheduled_time).getTime() - 5 * 60 * 1000;
+      if (Date.now() >= cutoff) {
+        return { error: "Predictions close 5 minutes before match time." };
+      }
+    }
+  }
+
   const { data, error } = await supabase.rpc("place_score_prediction", {
     p_user_id: user.id,
     p_market_id: parsed.data.marketId,

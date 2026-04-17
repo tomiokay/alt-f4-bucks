@@ -12,9 +12,10 @@ type Props = {
   balance: number;
   redTeams?: string[];
   blueTeams?: string[];
+  scheduledTime?: string | null;
 };
 
-export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTeams }: Props) {
+export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTeams, scheduledTime }: Props) {
   const [redScore, setRedScore] = useState("");
   const [blueScore, setBlueScore] = useState("");
   const [amount, setAmount] = useState(10);
@@ -27,7 +28,9 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
   const totalBettors = Object.values(pools).reduce((sum, p) => sum + p.bettors, 0);
 
   const isResolved = market.status === "resolved";
-  const isClosed = market.status !== "open";
+  const cutoffTime = scheduledTime ? new Date(new Date(scheduledTime).getTime() - 5 * 60 * 1000) : null;
+  const isPastCutoff = cutoffTime && cutoffTime < new Date();
+  const isClosed = market.status !== "open" || isPastCutoff;
   const canAfford = balance >= amount && amount >= 1;
   const hasScores = redScore !== "" && blueScore !== "" && parseInt(redScore) >= 0 && parseInt(blueScore) >= 0;
 

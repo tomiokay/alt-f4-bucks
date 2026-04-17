@@ -45,7 +45,7 @@ export async function createCustomMarket(formData: FormData) {
     featured: true,
   });
 
-  // Retry without featured if column doesn't exist
+  // Retry without optional columns if they don't exist
   if (error && error.code === "PGRST204") {
     const retry = await service.from("prediction_markets").insert({
       event_key: eventKey,
@@ -55,7 +55,6 @@ export async function createCustomMarket(formData: FormData) {
       description,
       options,
       status: "open",
-      is_custom: true,
     });
     error = retry.error;
   }

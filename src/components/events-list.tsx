@@ -56,11 +56,14 @@ function formatDate(time: string | null): string {
 }
 
 function getStatus(e: EventSummary): "live" | "upcoming" | "completed" {
+  if (e.totalMatches === 0) return "upcoming";
+  // Completed = all done, OR almost all done (unplayed finals games)
+  // If 98%+ matches are complete and only 1-3 remain, consider it completed
+  const pctComplete = e.completedMatches / e.totalMatches;
+  if (e.upcomingMatches === 0) return "completed";
+  if (pctComplete >= 0.98 && e.upcomingMatches <= 3) return "completed";
   // Live = has match schedule AND not all completed
-  if (e.totalMatches > 0 && e.upcomingMatches > 0) return "live";
-  // Completed = has matches AND all done
-  if (e.totalMatches > 0 && e.upcomingMatches === 0) return "completed";
-  // No matches = upcoming
+  if (e.upcomingMatches > 0) return "live";
   return "upcoming";
 }
 

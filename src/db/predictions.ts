@@ -101,9 +101,10 @@ export async function getAllOpenPredictionMarkets(): Promise<PredictionMarket[]>
   const supabase = await createClient();
   const { data } = await supabase
     .from("prediction_markets")
-    .select("*")
+    .select("id, event_key, match_key, type, title, description, options, line, correct_option, status, is_custom, featured, created_at, resolved_at")
     .in("status", ["open", "closed"])
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   return (data ?? []) as PredictionMarket[];
 }
@@ -124,7 +125,8 @@ export async function getAllPredictionPoolSummaries(): Promise<Map<string, Map<s
   const supabase = await createClient();
   const { data } = await supabase
     .from("prediction_pool_summary")
-    .select("*");
+    .select("market_id, option_key, pool, bettors")
+    .limit(500);
 
   const map = new Map<string, Map<string, PredictionPoolOption>>();
   for (const row of (data ?? []) as PredictionPoolOption[]) {

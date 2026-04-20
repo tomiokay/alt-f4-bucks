@@ -46,7 +46,8 @@ export async function getAllPoolSummaries(): Promise<Map<string, PoolSummary>> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("match_pool_summary")
-    .select("*");
+    .select("match_key, red_pool, blue_pool, total_pool, red_bettors, blue_bettors, total_bettors")
+    .limit(500);
 
   const map = new Map<string, PoolSummary>();
   for (const row of (data ?? []) as PoolSummary[]) {
@@ -96,24 +97,16 @@ export async function getActiveEventKeys(): Promise<string[]> {
   const { createServiceClient } = await import("@/lib/supabase/server");
   const supabase = await createServiceClient();
 
-  // Paginate to get ALL event keys (Supabase caps at ~1000 per request)
-  const keys = new Set<string>();
-  let page = 0;
-  const PAGE_SIZE = 1000;
-  while (true) {
-    const { data } = await supabase
-      .from("match_cache")
-      .select("event_key")
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+  // Use a single query with distinct-like approach — fetch recent events only
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    if (!data || data.length === 0) break;
-    for (const d of data as { event_key: string }[]) {
-      keys.add(d.event_key);
-    }
-    if (data.length < PAGE_SIZE) break;
-    page++;
-  }
+  const { data } = await supabase
+    .from("match_cache")
+    .select("event_key")
+    .gte("scheduled_time", twoWeeksAgo)
+    .limit(1000);
 
+  const keys = new Set((data ?? []).map((d: { event_key: string }) => d.event_key));
   return Array.from(keys);
 }
 
@@ -121,27 +114,17 @@ export async function getAllCachedMatches(): Promise<MatchCache[]> {
   const { createServiceClient } = await import("@/lib/supabase/server");
   const supabase = await createServiceClient();
 
-  // Only need recent matches for home page — last 3 weeks max
-  const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+  // Only fetch last 2 weeks of matches — single query, no pagination
+  const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-  const results: MatchCache[] = [];
-  let page = 0;
-  const PAGE_SIZE = 1000;
-  while (page < 3) {
-    const { data } = await supabase
-      .from("match_cache")
-      .select("*")
-      .gte("scheduled_time", threeWeeksAgo)
-      .order("scheduled_time", { ascending: false })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+  const { data } = await supabase
+    .from("match_cache")
+    .select("match_key, event_key, event_name, comp_level, match_number, red_teams, blue_teams, scheduled_time, actual_time, red_score, blue_score, winning_alliance, is_complete")
+    .gte("scheduled_time", twoWeeksAgo)
+    .order("scheduled_time", { ascending: false })
+    .limit(500);
 
-    if (!data || data.length === 0) break;
-    results.push(...(data as MatchCache[]));
-    if (data.length < PAGE_SIZE) break;
-    page++;
-  }
-
-  return results;
+  return (data ?? []) as MatchCache[];
 }
 
 export async function getEventList(): Promise<{ key: string; name: string }[]> {

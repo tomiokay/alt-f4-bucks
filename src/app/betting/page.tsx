@@ -65,37 +65,17 @@ async function BettingContent({ userId, query, q }: { userId: string; query: str
     allMatches = await searchMatches(query.toLowerCase());
   } else {
     // Fetch all non-complete matches + recently completed
-    const results: MatchCache[] = [];
-    let page = 0;
-    const PAGE_SIZE = 1000;
-
-    // Get upcoming/live matches (not complete)
-    while (true) {
-      const { data } = await service
-        .from("match_cache")
-        .select("*")
-        .eq("is_complete", false)
-        .order("scheduled_time", { ascending: true })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      if (!data || data.length === 0) break;
-      results.push(...(data as MatchCache[]));
-      if (data.length < PAGE_SIZE) break;
-      page++;
-    }
-
-    // Also get recently completed (last 2 weeks) for context
+    // Single query: upcoming + recent completed (last 2 weeks)
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: recentDone } = await service
-      .from("match_cache")
-      .select("*")
-      .eq("is_complete", true)
-      .gte("scheduled_time", twoWeeksAgo)
-      .order("scheduled_time", { ascending: false })
-      .range(0, 999);
 
-    if (recentDone) results.push(...(recentDone as MatchCache[]));
-    allMatches = results;
+    const { data } = await service
+      .from("match_cache")
+      .select("match_key, event_key, event_name, comp_level, match_number, red_teams, blue_teams, scheduled_time, actual_time, red_score, blue_score, winning_alliance, is_complete")
+      .or(`is_complete.eq.false,scheduled_time.gte.${twoWeeksAgo}`)
+      .order("scheduled_time", { ascending: true })
+      .limit(500);
+
+    allMatches = (data ?? []) as MatchCache[];
   }
 
   const pools: Record<string, PoolSummary> = {};

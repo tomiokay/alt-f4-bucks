@@ -20,7 +20,7 @@ import { TrendingMarkets } from "@/components/home/trending-markets";
 import { AutoSync } from "@/components/auto-sync";
 import type { MatchCache, PoolSummary, MatchOdds, PredictionMarket, PredictionPoolOption } from "@/lib/types";
 
-export const revalidate = 30;
+export const revalidate = 60;
 
 export type EnrichedMatch = {
   match: MatchCache;

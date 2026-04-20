@@ -50,21 +50,16 @@ async function EventsContent({ userId }: { userId: string }) {
     getCurrentEvents(),
   ]);
 
-  // Paginate to get ALL matches
-  let allMatches: { event_key: string; event_name: string; is_complete: boolean; scheduled_time: string | null }[] = [];
-  let page = 0;
-  const PAGE_SIZE = 1000;
-  while (true) {
-    const { data } = await service
-      .from("match_cache")
-      .select("event_key, event_name, is_complete, scheduled_time")
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+  // Fetch match counts per event — only recent events (last 4 weeks) + incomplete
+  const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
 
-    if (!data || data.length === 0) break;
-    allMatches.push(...(data as typeof allMatches));
-    if (data.length < PAGE_SIZE) break;
-    page++;
-  }
+  const { data: matchData } = await service
+    .from("match_cache")
+    .select("event_key, event_name, is_complete, scheduled_time")
+    .or(`scheduled_time.gte.${fourWeeksAgo},is_complete.eq.false`)
+    .limit(1000);
+
+  const allMatches = (matchData ?? []) as { event_key: string; event_name: string; is_complete: boolean; scheduled_time: string | null }[];
 
   const favoriteSet = new Set(favoriteKeys);
 

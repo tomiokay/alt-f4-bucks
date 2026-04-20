@@ -31,11 +31,19 @@ export async function GET(request: NextRequest) {
   if (singleEvent) {
     allKeys = [singleEvent];
   } else {
-    // Sync ALL TBA events + any already-tracked events
-    allKeys = [...new Set([
-      ...currentEvents.map((e) => e.key),
-      ...trackedKeys,
-    ])];
+    // Only sync recent events (2 weeks) + tracked events to reduce API calls
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const twoWeeksAhead = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const recentKeys = currentEvents
+      .filter((e) => {
+        const end = new Date(e.end_date + "T23:59:59");
+        const start = new Date(e.start_date);
+        return end >= twoWeeksAgo && start <= twoWeeksAhead;
+      })
+      .map((e) => e.key);
+
+    allKeys = [...new Set([...recentKeys, ...trackedKeys])];
   }
 
   let totalSynced = 0;

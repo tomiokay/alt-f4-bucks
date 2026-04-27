@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/db/profiles";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export async function GET() {
+  const profile = await getCurrentProfile();
+  if (!profile) return NextResponse.json({ claimed: false });
+
+  const service = await createServiceClient();
+  const { data } = await service
+    .from("transactions")
+    .select("id")
+    .eq("to_user_id", profile.id)
+    .eq("category", "worlds_bonus")
+    .limit(1);
+
+  return NextResponse.json({ claimed: (data?.length ?? 0) > 0 });
+}
+
 export async function POST() {
   const profile = await getCurrentProfile();
   if (!profile) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

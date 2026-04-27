@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 async function claimWorldsBonus() {
@@ -8,11 +8,24 @@ async function claimWorldsBonus() {
   return res.json();
 }
 
+async function checkClaimed() {
+  const res = await fetch("/api/claim-worlds-bonus");
+  return res.json();
+}
+
 export function WorldsBanner() {
   const [claimed, setClaimed] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    checkClaimed().then((res) => {
+      if (res.claimed) setClaimed(true);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   function handleClaim() {
     startTransition(async () => {
@@ -36,8 +49,8 @@ export function WorldsBanner() {
             <p className="text-[12px] text-[#7d8590]">Worlds is almost here. Claim your bonus to bet on the biggest matches of the season.</p>
           </div>
         </div>
-        {claimed ? (
-          <span className="shrink-0 text-[13px] text-[#22c55e] font-semibold">+$10,000 Claimed!</span>
+        {loading ? null : claimed ? (
+          <span className="shrink-0 text-[13px] text-[#22c55e] font-semibold">Claimed!</span>
         ) : (
           <button
             onClick={handleClaim}

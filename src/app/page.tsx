@@ -205,6 +205,16 @@ export default async function HomePage() {
   return (
     <div className="space-y-0">
       <AutoSync />
+      {/* Worlds banner */}
+      <div className="mb-4 rounded-xl bg-gradient-to-r from-[#f59e0b]/10 to-[#ef4444]/10 border border-[#f59e0b]/20 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🌎</span>
+          <div>
+            <h3 className="text-[15px] font-semibold text-[#e6edf3]">FIRST Championship — Coming Soon</h3>
+            <p className="text-[12px] text-[#7d8590]">Worlds is almost here. Get ready to bet on the biggest matches of the season.</p>
+          </div>
+        </div>
+      </div>
       <Suspense fallback={<HomeSkeleton />}>
         <HomeContent />
       </Suspense>

@@ -53,42 +53,17 @@ type GroupedNotification = {
 };
 
 function groupNotifications(notifications: Notification[]): GroupedNotification[] {
-  const groups = new Map<string, GroupedNotification>();
-
-  for (const n of notifications) {
-    const matchKey = (n.meta as Record<string, string>)?.match_key ?? "";
-    const groupKey = `${matchKey}:${n.type}`;
-
-    // Parse payout from win messages like "Paid out $1,044" or bet amount from "your $1,000 bet"
-    const payoutMatch = n.message.match(/Paid out \$([\d,]+)/);
-    const betMatch = n.message.match(/\$([\d,]+) bet/);
-    const amount = payoutMatch
-      ? parseInt(payoutMatch[1].replace(/,/g, ""))
-      : betMatch
-      ? parseInt(betMatch[1].replace(/,/g, ""))
-      : 0;
-
-    const existing = groups.get(groupKey);
-    if (existing) {
-      existing.count++;
-      existing.totalAmount += amount;
-      if (!n.read) existing.read = false;
-      if (n.created_at > existing.created_at) existing.created_at = n.created_at;
-    } else {
-      groups.set(groupKey, {
-        matchKey,
-        type: n.type,
-        count: 1,
-        totalAmount: amount,
-        message: n.message,
-        read: n.read,
-        created_at: n.created_at,
-        meta: n.meta,
-      });
-    }
-  }
-
-  return [...groups.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  // No grouping — show each notification individually
+  return notifications.map((n) => ({
+    matchKey: (n.meta as Record<string, string>)?.match_key ?? "",
+    type: n.type,
+    count: 1,
+    totalAmount: 0,
+    message: n.message,
+    read: n.read,
+    created_at: n.created_at,
+    meta: n.meta,
+  }));
 }
 
 export function NotificationsDropdown({ notifications, unreadCount }: Props) {
@@ -155,17 +130,7 @@ export function NotificationsDropdown({ notifications, unreadCount }: Props) {
                   const Icon = ICONS[g.type] ?? Bell;
                   const color = COLORS[g.type] ?? "text-[#7d8590]";
 
-                  // Build grouped message
-                  let message = g.message;
-                  if (g.count > 1) {
-                    if (g.type === "bet_won") {
-                      message = `You won ${g.count} bets — paid out $${g.totalAmount.toLocaleString()} on ${g.matchKey}!`;
-                    } else if (g.type === "bet_lost") {
-                      message = `You lost ${g.count} bets totaling $${g.totalAmount.toLocaleString()} on ${g.matchKey}.`;
-                    } else if (g.type === "bet_refund") {
-                      message = `${g.count} bets totaling $${g.totalAmount.toLocaleString()} were refunded on ${g.matchKey}.`;
-                    }
-                  }
+                  const message = g.message;
 
                   return (
                     <div

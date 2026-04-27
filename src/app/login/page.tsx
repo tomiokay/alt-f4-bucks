@@ -124,7 +124,7 @@ export default function LoginPage() {
                 </div>
                 <h3 className="text-[15px] font-semibold text-[#e6edf3]">Check your email</h3>
                 <p className="text-[13px] text-[#7d8590]">
-                  We sent a verification link to your email. Click it to activate your account.
+                  We sent a verification link to your email. Click it to activate your account. Check your spam folder if you don't see it.
                 </p>
                 <button
                   onClick={() => { setVerificationSent(false); setTab("login"); }}
@@ -141,7 +141,7 @@ export default function LoginPage() {
                   </div>
                   <h3 className="text-[15px] font-semibold text-[#e6edf3]">Check your email</h3>
                   <p className="text-[13px] text-[#7d8590]">
-                    We sent a password reset link to your email.
+                    We sent a password reset link to your email. Check your spam folder if you don't see it.
                   </p>
                   <button
                     onClick={() => { setShowReset(false); setResetSent(false); }}

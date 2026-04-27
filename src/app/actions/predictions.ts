@@ -173,9 +173,9 @@ export async function ensureScorePredictions(eventKey: string) {
       event_key: eventKey,
       match_key: match.match_key,
       type: "score_prediction",
-      title: `Predict the Score`,
-      description: `Predict the Red and Blue alliance scores. Closer to actual = bigger payout.`,
-      options: [{ key: "score", label: "Predict Red & Blue scores" }],
+      title: `Predict the RP`,
+      description: `Predict the Red and Blue alliance RPs. Closer to actual = bigger payout.`,
+      options: [{ key: "score", label: "Predict Red & Blue RPs" }],
       status: "open",
     });
 
@@ -215,11 +215,11 @@ export async function ensureEventMarkets(
       event_key: eventKey,
       match_key: match.match_key,
       type: "score_prediction",
-      title: `Predict the Score`,
+      title: `Predict the RP`,
       description: hasPred
         ? `Statbotics predicts Red ~${Math.round(pred.redPredScore!)} / Blue ~${Math.round(pred.bluePredScore!)}. Closer to actual scores = bigger payout.`
-        : `Predict the Red and Blue alliance scores. Closer to actual = bigger payout.`,
-      options: [{ key: "score", label: "Predict Red & Blue scores" }],
+        : `Predict the Red and Blue alliance RPs. Closer to actual = bigger payout.`,
+      options: [{ key: "score", label: "Predict Red & Blue RPs" }],
       line: hasPred ? Math.round(pred.redPredScore! + pred.bluePredScore!) : null,
       status: "open",
     });
@@ -316,17 +316,22 @@ export async function resolveScoreMarkets(eventKey: string) {
 
     const { data: match } = await service
       .from("match_cache")
-      .select("red_score, blue_score, is_complete")
+      .select("red_rp, blue_rp, red_score, blue_score, is_complete")
       .eq("match_key", market.match_key)
       .single();
 
-    if (!match?.is_complete || match.red_score === null || match.blue_score === null) continue;
+    if (!match?.is_complete) continue;
+
+    // Use RP if available, fall back to scores
+    const actualRed = match.red_rp ?? match.red_score;
+    const actualBlue = match.blue_rp ?? match.blue_score;
+    if (actualRed === null || actualBlue === null) continue;
 
     try {
       const { data: count } = await service.rpc("resolve_score_prediction", {
         p_market_id: market.id,
-        p_actual_red: match.red_score,
-        p_actual_blue: match.blue_score,
+        p_actual_red: actualRed,
+        p_actual_blue: actualBlue,
       });
       resolved += (count as number) ?? 0;
     } catch {

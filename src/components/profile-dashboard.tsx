@@ -336,7 +336,7 @@ export function ProfileDashboard({ profile, balance, bets, predictionBets = [], 
                   <div className="min-w-0">
                     <span className="text-[13px] text-[#e6edf3] block truncate">
                       {isScore
-                        ? `Score: ${bet.predicted_red}-${bet.predicted_blue}`
+                        ? `RP: ${bet.predicted_red}-${bet.predicted_blue}`
                         : bet.option_label}
                     </span>
                     <span className="text-[11px] text-[#484f58] block truncate">

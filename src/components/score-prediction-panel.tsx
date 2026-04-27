@@ -65,10 +65,10 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#21262d] px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center text-[9px] font-bold text-white">
-            S
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center text-[8px] font-bold text-white">
+            RP
           </div>
-          <span className="text-[13px] font-medium text-[#e6edf3]">Predict the Score</span>
+          <span className="text-[13px] font-medium text-[#e6edf3]">Predict the RP</span>
         </div>
         {!isClosed && totalPool > 0 && (
           <span className="text-[11px] text-[#484f58]">${totalPool} pool</span>
@@ -89,7 +89,7 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
               <div>
                 <label className="flex items-center gap-1.5 text-[12px] text-[#7d8590] mb-1.5">
                   <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
-                  Red Score
+                  Red RP
                 </label>
                 <input
                   type="number"
@@ -108,7 +108,7 @@ export function ScorePredictionPanel({ market, pools, balance, redTeams, blueTea
               <div>
                 <label className="flex items-center gap-1.5 text-[12px] text-[#7d8590] mb-1.5">
                   <span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
-                  Blue Score
+                  Blue RP
                 </label>
                 <input
                   type="number"

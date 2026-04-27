@@ -58,13 +58,10 @@ function formatDate(time: string | null): string {
 function getStatus(e: EventSummary): "live" | "upcoming" | "completed" {
   if (e.totalMatches === 0) return "upcoming";
   if (e.upcomingMatches === 0) return "completed";
-  // Almost done = unplayed playoff games (sweeps skip game 3)
-  // If 80%+ complete and 6 or fewer remaining, consider completed
-  const pctComplete = e.completedMatches / e.totalMatches;
-  if (pctComplete >= 0.80 && e.upcomingMatches <= 6) return "completed";
+  // 1 match left = completed (unplayed finals game 3 from a sweep)
+  if (e.upcomingMatches === 1) return "completed";
   // Live = has match schedule AND not all completed
-  if (e.upcomingMatches > 0) return "live";
-  return "upcoming";
+  return "live";
 }
 
 export function EventsList({ events, allEvents, upcomingTbaEvents = [], favoriteKeys = [] }: Props) {
